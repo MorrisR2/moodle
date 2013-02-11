@@ -33,7 +33,11 @@ $version  = 2013071200.00;              // YYYYMMDD      = weekly release date o
                                         //         RR    = release increments - 00 in DEV branches
                                         //           .XX = incremental changes
 
+<<<<<<< HEAD
 $release  = '2.6dev (Build: 20130712)'; // Human-friendly version name
+=======
+$release  = '2.5beta+ (Build: 20130426)';// Human-friendly version name
+>>>>>>> MDL-37974 code area: manual enrolment expiration - add option to suspend and fire event without deleting data
 
 $branch   = '26';                       // this version's branch
 $maturity = MATURITY_ALPHA;             // this version's maturity level
