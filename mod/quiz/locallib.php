@@ -403,6 +403,13 @@ function quiz_delete_attempt($attempt, $quiz) {
         quiz_save_best_grade($quiz, $userid);
     }
 
+    // Update completion state.
+    $cm = get_coursemodule_from_instance('quiz', $quiz->id);
+    $course = $DB->get_record('course', array('id'=>$cm->course));
+    $completion=new completion_info($course);
+    if ($completion->is_enabled($cm) && $quiz->completionattemptsexhausted) {
+        $completion->update_state($cm, COMPLETION_INCOMPLETE);
+    }
     quiz_update_grades($quiz, $userid);
 }
 
@@ -1659,6 +1666,11 @@ function quiz_attempt_submitted_handler($event) {
         return true;
     }
 
+    // Update completion state.
+    $completion=new completion_info($course);
+    if ( $completion->is_enabled($cm) && ($quiz->completionattemptsexhausted || $quiz->completionpass) ) {
+        $completion->update_state($cm, COMPLETION_COMPLETE, $event->userid);
+    }
     return quiz_send_notification_messages($course, $quiz, $attempt,
             context_module::instance($cm->id), $cm);
 }

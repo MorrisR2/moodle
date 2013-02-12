@@ -585,4 +585,30 @@ class mod_quiz_mod_form extends moodleform_mod {
 
         return $errors;
     }
+
+    public function add_completion_rules() {
+        $mform =& $this->_form;
+        $items = array();
+
+        $group = array();
+        $group[] =& $mform->createElement('advcheckbox', 'completionpass', null, get_string('completionpass', 'quiz'), 
+                                          array('onChange'=>'id_completionattemptsexhausted.checked=false', 'group'=>'cpass'));
+
+        $group[] =& $mform->createElement('advcheckbox', 'completionattemptsexhausted', null, 
+                                          get_string('completionattemptsexhausted', 'quiz'), 
+                                          array('id'=>'id_completionattemptsexhausted', 'group'=>'cattempts'));
+
+        $mform->disabledIf('completionattemptsexhausted', 'completionpass', 'notchecked');
+
+        $mform->addGroup($group, 'completionpassgroup', get_string('completionpass', 'quiz'), '', false);
+        $mform->addHelpButton('completionpassgroup', 'completionpass', 'quiz');
+        $items[] = 'completionpassgroup';
+        return $items;
+    }
+
+    public function completion_rule_enabled($data) {
+        $attempts = !empty($data['completionattemptsexhausted']);
+        $pass = empty($data['completionpass']);
+        return $attempts || $pass;
+    }
 }
