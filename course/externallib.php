@@ -152,6 +152,9 @@ class core_course_external extends external_api {
                             list($module['description'], $descriptionformat) = external_format_text($cm->get_content(),
                                 FORMAT_HTML, $modcontext->id, $cm->modname, 'intro', $cm->id);
                         }
+                        if (!empty($cm->showdescription)) {
+                            $module['description'] = $cm->get_content();
+                        }
 
                         //url of the module
                         $url = $cm->get_url();
