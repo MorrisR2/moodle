@@ -147,18 +147,14 @@ class core_course_external extends external_api {
 
                         $modcontext = context_module::instance($cm->id);
 
-<<<<<<< HEAD
-                    if (!empty($cm->showdescription) or $cm->modname == 'label') {
-                        // We want to use the external format. However from reading get_formatted_content(), get_content() format is always FORMAT_HTML.
-                        list($module['description'], $descriptionformat) = external_format_text($cm->get_content(),
-                            FORMAT_HTML, $modcontext->id, $cm->modname, 'intro', $cm->id);
-                    }
-=======
                         if (!empty($cm->showdescription)) {
                             $module['description'] = $cm->get_content();
                         }
->>>>>>> 9f3cc17... MDL-30775 get_course_contents: remove warnings when the section is empty
-
+                        if (!empty($cm->showdescription) or $cm->modname == 'label') {
+                            // We want to use the external format. However from reading get_formatted_content(), get_content() format is always FORMAT_HTML.
+                            list($module['description'], $descriptionformat) = external_format_text($cm->get_content(),
+                                FORMAT_HTML, $modcontext->id, $cm->modname, 'intro', $cm->id);
+                        }
                         //url of the module
                         $url = $cm->get_url();
                         if ($url) { //labels don't have url
