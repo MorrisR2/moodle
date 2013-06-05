@@ -20,8 +20,7 @@
  * This plugin lets the user specify an IMS Enterprise file to be processed.
  * The IMS Enterprise file is mainly parsed on a regular cron,
  * but can also be imported via the UI (Admin Settings).
- * @package    enrol
- * @subpackage imsenterprise
+ * @package    enrol_imsenterprise
  * @copyright  2010 Eugene Venter
  * @author     Eugene Venter - based on code by Dan Stowell
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
@@ -386,13 +385,6 @@ function process_group_tag($tagcontents) {
                             $this->log_line('No ' . $imsname . ' description tag found for ' . $coursecode . ' coursecode, using ' . $coursecode . ' instead');
                             $course->{$courseattr} = $coursecode;
                         }
-
-                        if ($courseattr == 'summary') {
-                            $format = FORMAT_HTML;
-                        } else {
-                            $format = FORMAT_PLAIN;
-                        }
-                        $course->{$courseattr} = format_text($course->$courseattr, $format);
                     }
 
                     $course->idnumber = $coursecode;
@@ -405,7 +397,6 @@ function process_group_tag($tagcontents) {
                     $course->groupmode = $courseconfig->groupmode;
                     $course->groupmodeforce = $courseconfig->groupmodeforce;
                     $course->enablecompletion = $courseconfig->enablecompletion;
-                    $course->completionstartonenrol = $courseconfig->completionstartonenrol;
                     // Insert default names for teachers/students, from the current language
 
                     // Handle course categorisation (taken from the group.org.orgunit field if present)

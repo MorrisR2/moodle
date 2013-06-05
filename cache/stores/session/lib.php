@@ -90,7 +90,7 @@ abstract class session_data_store extends cache_store {
  * @copyright  2012 Sam Hemelryk
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class cachestore_session extends session_data_store implements cache_is_key_aware {
+class cachestore_session extends session_data_store implements cache_is_key_aware, cache_is_searchable {
 
     /**
      * The name of the store
@@ -137,7 +137,8 @@ class cachestore_session extends session_data_store implements cache_is_key_awar
      */
     public static function get_supported_features(array $configuration = array()) {
         return self::SUPPORTS_DATA_GUARANTEE +
-               self::SUPPORTS_NATIVE_TTL;
+               self::SUPPORTS_NATIVE_TTL +
+               self::IS_SEARCHABLE;
     }
 
     /**
@@ -335,8 +336,9 @@ class cachestore_session extends session_data_store implements cache_is_key_awar
      * @return bool Returns true if the operation was a success, false otherwise.
      */
     public function delete($key) {
+        $result = isset($this->store[$key]);
         unset($this->store[$key]);
-        return true;
+        return $result;
     }
 
     /**
@@ -348,8 +350,10 @@ class cachestore_session extends session_data_store implements cache_is_key_awar
     public function delete_many(array $keys) {
         $count = 0;
         foreach ($keys as $key) {
+            if (isset($this->store[$key])) {
+                $count++;
+            }
             unset($this->store[$key]);
-            $count++;
         }
         return $count;
     }
@@ -361,6 +365,7 @@ class cachestore_session extends session_data_store implements cache_is_key_awar
      */
     public function purge() {
         $this->store = array();
+        return true;
     }
 
     /**
@@ -398,5 +403,29 @@ class cachestore_session extends session_data_store implements cache_is_key_awar
      */
     public function my_name() {
         return $this->name;
+    }
+
+    /**
+     * Finds all of the keys being stored in the cache store instance.
+     *
+     * @return array
+     */
+    public function find_all() {
+        return array_keys($this->store);
+    }
+
+    /**
+     * Finds all of the keys whose keys start with the given prefix.
+     *
+     * @param string $prefix
+     */
+    public function find_by_prefix($prefix) {
+        $return = array();
+        foreach ($this->find_all() as $key) {
+            if (strpos($key, $prefix) === 0) {
+                $return[] = $key;
+            }
+        }
+        return $return;
     }
 }

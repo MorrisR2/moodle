@@ -1,5 +1,4 @@
 <?php
-
 // This file is part of Moodle - http://moodle.org/
 //
 // Moodle is free software: you can redistribute it and/or modify
@@ -30,9 +29,10 @@
 
 require_once(__DIR__ . '/../../behat/behat_base.php');
 
-use Behat\Behat\Event\SuiteEvent as SuiteEvent;
-use Behat\Behat\Event\ScenarioEvent as ScenarioEvent;
-use Behat\Behat\Event\StepEvent as StepEvent;
+use Behat\Behat\Event\SuiteEvent as SuiteEvent,
+    Behat\Behat\Event\ScenarioEvent as ScenarioEvent,
+    Behat\Behat\Event\StepEvent as StepEvent,
+    WebDriver\Exception\NoSuchWindow as NoSuchWindow;
 
 /**
  * Hooks to the behat process.
@@ -53,11 +53,6 @@ use Behat\Behat\Event\StepEvent as StepEvent;
 class behat_hooks extends behat_base {
 
     /**
-     * @var string The last visited URL.
-     */
-    private $lasturl = null;
-
-    /**
      * Gives access to moodle codebase, ensures all is ready and sets up the test lock.
      *
      * Includes config.php to use moodle codebase with $CFG->behat_*
@@ -74,12 +69,14 @@ class behat_hooks extends behat_base {
         define('BEHAT_RUNNING', 1);
         define('CLI_SCRIPT', 1);
 
+        // With BEHAT_RUNNING we will be using $CFG->behat_* instead of $CFG->dataroot, $CFG->prefix and $CFG->wwwroot.
         require_once(__DIR__ . '/../../../config.php');
 
         // Now that we are MOODLE_INTERNAL.
         require_once(__DIR__ . '/../../behat/classes/behat_command.php');
         require_once(__DIR__ . '/../../behat/classes/util.php');
         require_once(__DIR__ . '/../../testing/classes/test_lock.php');
+        require_once(__DIR__ . '/../../testing/classes/nasty_strings.php');
 
         // Avoids vendor/bin/behat to be executed directly without test environment enabled
         // to prevent undesired db & dataroot modifications, this is also checked
@@ -93,6 +90,11 @@ class behat_hooks extends behat_base {
             throw new Exception($CFG->behat_wwwroot . ' is not available, ensure you started your PHP built-in server. More info in ' . behat_command::DOCS_URL . '#Running_tests');
         }
 
+        // Prevents using outdated data, upgrade script would start and tests would fail.
+        if (!behat_util::is_test_data_updated()) {
+            $commandpath = 'php admin/tool/behat/cli/util.php';
+            throw new Exception('Your behat test site is outdated, please run ' . $commandpath . ' from your moodle dirroot to drop and install the behat test site again.');
+        }
         // Avoid parallel tests execution, it continues when the previous lock is released.
         test_lock::acquire('behat');
     }
@@ -111,19 +113,25 @@ class behat_hooks extends behat_base {
                php_sapi_name() != 'cli' ||
                !behat_util::is_test_mode_enabled() ||
                !behat_util::is_test_site() ||
-               !isset($CFG->originaldataroot))  {
-           throw new coding_exception('Behat only can modify the test database and the test dataroot!');
+               !isset($CFG->originaldataroot)) {
+            throw new coding_exception('Behat only can modify the test database and the test dataroot!');
         }
+
+        // Avoid some notices / warnings.
+        $SESSION = new stdClass();
 
         behat_util::reset_database();
         behat_util::reset_dataroot();
 
+        purge_all_caches();
+        accesslib_clear_all_caches(true);
+
+        // Reset the nasty strings list used during the last test.
+        nasty_strings::reset_used_strings();
+
         // Assing valid data to admin user (some generator-related code needs a valid user).
         $user = $DB->get_record('user', array('username' => 'admin'));
         session_set_user($user);
-
-        // Avoid some notices / warnings.
-        $SESSION = new stdClass();
     }
 
     /**
@@ -162,11 +170,11 @@ class behat_hooks extends behat_base {
             return;
         }
 
-        // Wait until the page is ready if we are in a new URL.
-        $currenturl = $this->getSession()->getCurrentUrl();
-        if (is_null($this->lasturl) || $currenturl !== $this->lasturl) {
-            $this->lasturl = $currenturl;
+        // Wait until the page is ready.
+        try {
             $this->getSession()->wait(self::TIMEOUT, '(document.readyState === "complete")');
+        } catch (NoSuchWindow $e) {
+            // If we were interacting with a popup window it will not exists after closing it.
         }
     }
 

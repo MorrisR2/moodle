@@ -91,10 +91,10 @@ if (!isset($CFG->wwwroot) or $CFG->wwwroot === 'http://example.com/moodle') {
 }
 
 // Ignore $CFG->behat_wwwroot and use the same wwwroot.
-if (isset($CFG->behat_switchcompletely)) {
+if (!empty($CFG->behat_switchcompletely)) {
     $CFG->behat_wwwroot = $CFG->wwwroot;
 
-} else if (!isset($CFG->behat_wwwroot)) {
+} else if (empty($CFG->behat_wwwroot)) {
     // Default URL for acceptance testing, only accessible from localhost.
     $CFG->behat_wwwroot = 'http://localhost:8000';
 }
@@ -107,11 +107,11 @@ if (isset($CFG->behat_switchcompletely)) {
 // Test environment is enabled if:
 // * User has previously enabled through admin/tool/behat/cli/util.php --enable.
 // Both are required to switch to test mode
-if (isset($CFG->behat_dataroot) && isset($CFG->behat_prefix) && file_exists($CFG->behat_dataroot)) {
+if (!empty($CFG->behat_dataroot) && !empty($CFG->behat_prefix) && file_exists($CFG->behat_dataroot)) {
 
     $CFG->behat_dataroot = realpath($CFG->behat_dataroot);
 
-    $switchcompletely = isset($CFG->behat_switchcompletely) && php_sapi_name() !== 'cli';
+    $switchcompletely = !empty($CFG->behat_switchcompletely) && php_sapi_name() !== 'cli';
     $builtinserver = php_sapi_name() === 'cli-server';
     $behatrunning = defined('BEHAT_RUNNING');
     $testenvironmentrequested = $switchcompletely || $builtinserver || $behatrunning;
@@ -251,10 +251,10 @@ if (file_exists("$CFG->dataroot/climaintenance.html")) {
 
 if (CLI_SCRIPT) {
     // sometimes people use different PHP binary for web and CLI, make 100% sure they have the supported PHP version
-    if (version_compare(phpversion(), '5.3.2') < 0) {
+    if (version_compare(phpversion(), '5.3.3') < 0) {
         $phpversion = phpversion();
         // do NOT localise - lang strings would not work here and we CAN NOT move it to later place
-        echo "Moodle 2.1 or later requires at least PHP 5.3.2 (currently using version $phpversion).\n";
+        echo "Moodle 2.5 or later requires at least PHP 5.3.3 (currently using version $phpversion).\n";
         echo "Some servers may have multiple PHP versions installed, are you using the correct executable?\n";
         exit(1);
     }
@@ -277,7 +277,7 @@ umask(0000);
 
 // exact version of currently used yui2 and 3 library
 $CFG->yui2version = '2.9.0';
-$CFG->yui3version = '3.8.0';
+$CFG->yui3version = '3.9.1';
 
 
 // special support for highly optimised scripts that do not need libraries and DB connection
@@ -703,6 +703,7 @@ try {
     if (empty($CFG->version)) {
         $SITE = new stdClass();
         $SITE->id = 1;
+        $SITE->shortname = null;
     } else {
         throw $e;
     }

@@ -1,5 +1,4 @@
 <?php
-
 // This file is part of Moodle - http://moodle.org/
 //
 // Moodle is free software: you can redistribute it and/or modify
@@ -40,20 +39,33 @@ class behat_navigation extends behat_base {
 
     /**
      * Expands the selected node of the navigation tree that matches the text.
-     *
      * @Given /^I expand "(?P<nodetext_string>(?:[^"]|\\")*)" node$/
+     *
+     * @throws ElementNotFoundException Thrown by behat_base::find
      * @param string $nodetext
      */
     public function i_expand_node($nodetext) {
 
-        $nodetext = $this->fixStepArgument($nodetext);
+        // This step is useless with Javascript disabled as Moodle auto expands
+        // all of tree's nodes; adding this because of scenarios that shares the
+        // same steps with and without Javascript enabled.
+        if (!$this->running_javascript()) {
+            return false;
+        }
 
         $xpath = "//ul[contains(concat(' ', normalize-space(@class), ' '), ' block_tree ')]
+/child::li
+/child::p[contains(concat(' ', normalize-space(@class), ' '), ' branch')]
+/child::span[contains(concat(' ', normalize-space(.), ' '), '" . $nodetext . "')]
+|
+//ul[contains(concat(' ', normalize-space(@class), ' '), ' block_tree ')]
+/descendant::li[not(contains(concat(' ', normalize-space(@class), ' '), ' collapsed'))]
 /descendant::li
-/descendant::p[contains(concat(' ', normalize-space(@class), ' '), ' branch')]
-/descendant::span[contains(concat(' ', normalize-space(.), ' '), '" . $nodetext . "')]";
+/child::p[contains(concat(' ', normalize-space(@class), ' '), ' branch')]
+/child::span[contains(concat(' ', normalize-space(.), ' '), '" . $nodetext . "')]
+";
 
-        $node = $this->getSession()->getPage()->find('xpath', $xpath);
+        $node = $this->find('xpath', $xpath);
         $node->click();
     }
 

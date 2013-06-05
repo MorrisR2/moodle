@@ -43,7 +43,7 @@ require_once($CFG->libdir.'/outputrequirementslib.php');
  * this function.
  */
 function theme_reset_all_caches() {
-    global $CFG;
+    global $CFG, $PAGE;
     require_once("$CFG->libdir/filelib.php");
 
     $next = time();
@@ -56,6 +56,10 @@ function theme_reset_all_caches() {
 
     set_config('themerev', $next); // time is unique even when you reset/switch database
     fulldelete("$CFG->cachedir/theme");
+
+    if ($PAGE) {
+        $PAGE->reload_theme();
+    }
 }
 
 /**
@@ -316,6 +320,12 @@ class theme_config {
     public $hidefromselector = false;
 
     /**
+     * @var array list of YUI CSS modules to be included on each page. This may be used
+     * to remove cssreset and use cssnormalise module instead.
+     */
+    public $yuicssmodules = array('cssreset', 'cssfonts', 'cssgrids', 'cssbase');
+
+    /**
      * @var renderer_factory Instance of the renderer_factory implementation
      * we are using. Implementation detail.
      */
@@ -407,7 +417,8 @@ class theme_config {
 
         $configurable = array('parents', 'sheets', 'parents_exclude_sheets', 'plugins_exclude_sheets', 'javascripts', 'javascripts_footer',
                               'parents_exclude_javascripts', 'layouts', 'enable_dock', 'enablecourseajax', 'supportscssoptimisation',
-                              'rendererfactory', 'csspostprocess', 'editor_sheets', 'rarrow', 'larrow', 'hidefromselector', 'doctype');
+                              'rendererfactory', 'csspostprocess', 'editor_sheets', 'rarrow', 'larrow', 'hidefromselector', 'doctype',
+                              'yuicssmodules');
 
         foreach ($config as $key=>$value) {
             if (in_array($key, $configurable)) {
@@ -472,6 +483,20 @@ class theme_config {
 
         //fix arrows if needed
         $this->check_theme_arrows();
+    }
+
+    /**
+     * Let the theme initialise the page object (usually $PAGE).
+     *
+     * This may be used for example to request jQuery in add-ons.
+     *
+     * @param moodle_page $page
+     */
+    public function init_page(moodle_page $page) {
+        $themeinitfunction = 'theme_'.$this->name.'_page_init';
+        if (function_exists($themeinitfunction)) {
+            $themeinitfunction($page);
+        }
     }
 
     /**
@@ -823,10 +848,12 @@ class theme_config {
     protected function css_files_get_contents($file, array $keys, css_optimiser $optimiser = null) {
         global $CFG;
         if (is_array($file)) {
+            // We use a separate array to keep everything in the exact same order.
+            $return = array();
             foreach ($file as $key=>$f) {
-                $file[$key] = $this->css_files_get_contents($f, array_merge($keys, array($key)), $optimiser);
+                $return[clean_param($key, PARAM_SAFEDIR)] = $this->css_files_get_contents($f, array_merge($keys, array($key)), $optimiser);
             }
-            return $file;
+            return $return;
         } else {
             $contents = file_get_contents($file);
             $contents = $this->post_process($contents);
@@ -922,7 +949,6 @@ class theme_config {
                 }
             }
         }
-
         return $js;
     }
 
@@ -1050,6 +1076,74 @@ class theme_config {
         }
 
         return $url;
+    }
+
+    /**
+     * Returns URL to the stored file via pluginfile.php.
+     *
+     * Note the theme must also implement pluginfile.php handler,
+     * theme revision is used instead of the itemid.
+     *
+     * @param string $setting
+     * @param string $filearea
+     * @return string protocol relative URL or null if not present
+     */
+    public function setting_file_url($setting, $filearea) {
+        global $CFG;
+
+        if (empty($this->settings->$setting)) {
+            return null;
+        }
+
+        $component = 'theme_'.$this->name;
+        $itemid = theme_get_revision();
+        $filepath = $this->settings->$setting;
+        $syscontext = context_system::instance();
+
+        $url = moodle_url::make_file_url("$CFG->wwwroot/pluginfile.php", "/$syscontext->id/$component/$filearea/$itemid".$filepath);
+
+        // Now this is tricky because the we can not hardcode http or https here, lets use the relative link.
+        // Note: unfortunately moodle_url does not support //urls yet.
+
+        $url = preg_replace('|^https?://|i', '//', $url->out(false));
+
+        return $url;
+    }
+
+    /**
+     * Serve the theme setting file.
+     *
+     * @param string $filearea
+     * @param array $args
+     * @param bool $forcedownload
+     * @param array $options
+     * @return bool may terminate if file not found or donotdie not specified
+     */
+    public function setting_file_serve($filearea, $args, $forcedownload, $options) {
+        global $CFG;
+        require_once("$CFG->libdir/filelib.php");
+
+        $syscontext = context_system::instance();
+        $component = 'theme_'.$this->name;
+
+        $revision = array_shift($args);
+        if ($revision < 0) {
+            $lifetime = 0;
+        } else {
+            $lifetime = 60*60*24*60;
+        }
+
+        $fs = get_file_storage();
+        $relativepath = implode('/', $args);
+
+        $fullpath = "/{$syscontext->id}/{$component}/{$filearea}/0/{$relativepath}";
+        $fullpath = rtrim($fullpath, '/');
+        if ($file = $fs->get_file_by_hash(sha1($fullpath))) {
+            send_stored_file($file, $lifetime, 0, $forcedownload, $options);
+            return true;
+        } else {
+            send_file_not_found();
+        }
     }
 
     /**

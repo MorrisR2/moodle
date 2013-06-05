@@ -798,7 +798,7 @@ function calendar_get_events_by_id($eventids) {
  * @return string $content return available control for the calender in html
  */
 function calendar_top_controls($type, $data) {
-    global $CFG;
+    global $CFG, $PAGE;
     $content = '';
     if(!isset($data['d'])) {
         $data['d'] = 1;
@@ -821,6 +821,7 @@ function calendar_top_controls($type, $data) {
 
     $data['m'] = $date['mon'];
     $data['y'] = $date['year'];
+    $urlbase = $PAGE->url;
 
     //Accessibility: calendar block controls, replaced <table> with <div>.
     //$nexttext = link_arrow_right(get_string('monthnext', 'access'), $url='', $accesshide=true);
@@ -830,8 +831,8 @@ function calendar_top_controls($type, $data) {
         case 'frontpage':
             list($prevmonth, $prevyear) = calendar_sub_month($data['m'], $data['y']);
             list($nextmonth, $nextyear) = calendar_add_month($data['m'], $data['y']);
-            $nextlink = calendar_get_link_next(get_string('monthnext', 'access'), 'index.php?', 0, $nextmonth, $nextyear, $accesshide=true);
-            $prevlink = calendar_get_link_previous(get_string('monthprev', 'access'), 'index.php?', 0, $prevmonth, $prevyear, true);
+            $nextlink = calendar_get_link_next(get_string('monthnext', 'access'), $urlbase, 0, $nextmonth, $nextyear, true);
+            $prevlink = calendar_get_link_previous(get_string('monthprev', 'access'), $urlbase, 0, $prevmonth, $prevyear, true);
 
             $calendarlink = calendar_get_link_href(new moodle_url(CALENDAR_URL.'view.php', array('view'=>'month')), 1, $data['m'], $data['y']);
             if (!empty($data['id'])) {
@@ -857,8 +858,8 @@ function calendar_top_controls($type, $data) {
         case 'course':
             list($prevmonth, $prevyear) = calendar_sub_month($data['m'], $data['y']);
             list($nextmonth, $nextyear) = calendar_add_month($data['m'], $data['y']);
-            $nextlink = calendar_get_link_next(get_string('monthnext', 'access'), 'view.php?id='.$data['id'].'&amp;', 0, $nextmonth, $nextyear, $accesshide=true);
-            $prevlink = calendar_get_link_previous(get_string('monthprev', 'access'), 'view.php?id='.$data['id'].'&amp;', 0, $prevmonth, $prevyear, true);
+            $nextlink = calendar_get_link_next(get_string('monthnext', 'access'), $urlbase, 0, $nextmonth, $nextyear, true);
+            $prevlink = calendar_get_link_previous(get_string('monthprev', 'access'), $urlbase, 0, $prevmonth, $prevyear, true);
 
             $calendarlink = calendar_get_link_href(new moodle_url(CALENDAR_URL.'view.php', array('view'=>'month')), 1, $data['m'], $data['y']);
             if (!empty($data['id'])) {
@@ -2800,8 +2801,6 @@ function calendar_add_subscription($sub) {
         $sub->pollinterval = 0;
     }
 
-    $cache = cache::make('core', 'calendar_subscriptions');
-
     if (!empty($sub->name)) {
         if (empty($sub->id)) {
             $id = $DB->insert_record('event_subscriptions', $sub);
@@ -2809,9 +2808,7 @@ function calendar_add_subscription($sub) {
             return $id;
         } else {
             // Why are we doing an update here?
-            $DB->update_record('event_subscriptions', $sub);
-            // update cache.
-            $cache->set($sub->id, $sub);
+            calendar_update_subscription($sub);
             return $sub->id;
         }
     } else {
@@ -2919,11 +2916,7 @@ function calendar_process_subscription_row($subscriptionid, $pollinterval, $acti
                 break;
             }
             $sub->pollinterval = $pollinterval;
-            $DB->update_record('event_subscriptions', $sub);
-
-            // update the cache.
-            $cache = cache::make('core', 'calendar_subscriptions');
-            $cache->set($sub->id, $sub);
+            calendar_update_subscription($sub);
 
             // Update the events.
             return "<p>".get_string('subscriptionupdated', 'calendar', $sub->name)."</p>" . calendar_update_subscription_events($subscriptionid);
@@ -3048,11 +3041,31 @@ function calendar_update_subscription_events($subscriptionid) {
     $ical = calendar_get_icalendar($sub->url);
     $return = calendar_import_icalendar_events($ical, $sub->courseid, $subscriptionid);
     $sub->lastupdated = time();
-    $DB->update_record('event_subscriptions', $sub);
-    // Update the cache.
-    $cache = cache::make('core', 'calendar_subscriptions');
-    $cache->set($subscriptionid, $sub);
+    calendar_update_subscription($sub);
     return $return;
+}
+
+/**
+ * Update a calendar subscription. Also updates the associated cache.
+ *
+ * @param stdClass|array $subscription Subscription record.
+ * @throws coding_exception If something goes wrong
+ * @since Moodle 2.5
+ */
+function calendar_update_subscription($subscription) {
+    global $DB;
+
+    if (is_array($subscription)) {
+        $subscription = (object)$subscription;
+    }
+    if (empty($subscription->id) || !$DB->record_exists('event_subscriptions', array('id' => $subscription->id))) {
+        throw new coding_exception('Cannot update a subscription without a valid id');
+    }
+
+    $DB->update_record('event_subscriptions', $subscription);
+    // Update cache.
+    $cache = cache::make('core', 'calendar_subscriptions');
+    $cache->set($subscription->id, $subscription);
 }
 
 /**
@@ -3109,6 +3122,7 @@ function calendar_cron() {
     require_once($CFG->libdir.'/bennu/bennu.inc.php');
 
     mtrace('Updating calendar subscriptions:');
+    cron_trace_time_and_memory();
 
     $time = time();
     $subscriptions = $DB->get_records_sql('SELECT * FROM {event_subscriptions} WHERE pollinterval > 0 AND lastupdated + pollinterval < ?', array($time));
