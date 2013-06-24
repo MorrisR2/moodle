@@ -889,6 +889,7 @@ class question_bank_view {
     protected $countsql;
     protected $loadsql;
     protected $sqlparams;
+    protected $searchconditions = array();
 
     /**
      * Constructor
@@ -926,7 +927,15 @@ class question_bank_view {
         $this->init_column_types();
         $this->init_columns($this->wanted_columns(), $this->heading_column());
         $this->init_sort();
+        $this->init_search_conditions($this->contexts, $this->course, $this->cm);
     }
+
+    protected function init_search_conditions() {
+        foreach (get_plugin_list_with_class('local', 'question_bank_search_condition', 'lib.php') as $searchclass) {
+            $this->add_searchcondition(new $searchclass);
+        }
+    }
+
 
     protected function wanted_columns() {
         $columns = array('checkbox', 'qtype', 'questionname', 'editaction',
@@ -1166,26 +1175,24 @@ class question_bank_view {
 
     /// Build the where clause.
         $tests = array('q.parent = 0');
-
-        if (!$showhidden) {
-            $tests[] = 'q.hidden = 0';
+        $this->sqlparams = array();
+        // Conditions can be added via local plugins which implement local_*_question_bank_search_condition, or at the page level through add_searchcondition()
+        $this->searchconditions[] = new question_bank_search_condition_hide(! $showhidden);
+        $this->searchconditions[] = new question_bank_search_condition_category($category->id, $recurse);
+        foreach ($this->searchconditions as $searchcondition) {
+            if ($searchcondition->where()) {
+                $tests[] = '((' . $searchcondition->where() .'))';
+            }
+            if ($searchcondition->params()) {
+                $this->sqlparams = array_merge( $this->sqlparams, $searchcondition->params() );
+            }
         }
-
-        if ($recurse) {
-            $categoryids = question_categorylist($category->id);
-        } else {
-            $categoryids = array($category->id);
-        }
-        list($catidtest, $params) = $DB->get_in_or_equal($categoryids, SQL_PARAMS_NAMED, 'cat');
-        $tests[] = 'q.category ' . $catidtest;
-        $this->sqlparams = $params;
 
     /// Build the SQL.
         $sql = ' FROM {question} q ' . implode(' ', $joins);
         $sql .= ' WHERE ' . implode(' AND ', $tests);
         $this->countsql = 'SELECT count(1)' . $sql;
         $this->loadsql = 'SELECT ' . implode(', ', $fields) . $sql . ' ORDER BY ' . implode(', ', $sorts);
-        $this->sqlparams = $params;
     }
 
     protected function get_question_count() {
@@ -1617,6 +1624,10 @@ class question_bank_view {
             return true;
         }
     }
+
+    public function add_searchcondition($searchcondition) {
+        $this->searchconditions[] = $searchcondition;
+    }
 }
 
 /**
@@ -1901,4 +1912,64 @@ function create_new_question_button($categoryid, $params, $caption, $tooltip = '
     }
 }
 
+abstract class question_bank_search_condition {
+    public abstract function where();
+
+    public function params() {
+        return array();
+    }
+}
+
+/**
+ *  This class controls whether hidden / deleted questions are hidden in the list.
+ */
+class question_bank_search_condition_hide extends question_bank_search_condition {
+    protected $where  = '';
+
+    public function __construct($hide = true) {
+        if ($hide) {
+            $this->where = 'q.hidden = 0';
+        }
+    }
+
+    public function where() {
+        return  $this->where;
+    }
+}
+
+
+/**
+ *  This class controls which category questions are listed from.
+ */
+class question_bank_search_condition_category extends question_bank_search_condition {
+    protected $categoryid;
+    protected $recurse;
+    protected $where;
+    protected $params;
+
+    public function __construct($categoryid = null, $recurse = false) {
+        $this->categoryid = $categoryid;
+        $this->recurse = $recurse;
+        $this->init();
+    }
+
+    private function init() {
+        global $DB;
+        if ($this->recurse) {
+            $categoryids = question_categorylist($this->categoryid);
+        } else {
+            $categoryids = array($this->categoryid);
+        }
+        list($catidtest, $this->params) = $DB->get_in_or_equal($categoryids, SQL_PARAMS_NAMED, 'cat');
+        $this->where = 'q.category ' . $catidtest;
+    }
+
+    public function where() {
+        return  $this->where;
+    }
+
+    public function params() {
+        return $this->params;
+    }
+}
 
