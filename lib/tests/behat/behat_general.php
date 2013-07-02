@@ -83,6 +83,14 @@ class behat_general extends behat_base {
     }
 
     /**
+     * Accepts the currently displayed alert dialog. This step does not work in all the browsers, consider it experimental.
+     * @Given /^I accept the currently displayed dialog$/
+     */
+    public function accept_currently_displayed_alert_dialog() {
+        $this->getSession()->getDriver()->getWebDriverSession()->accept_alert();
+    }
+
+    /**
      * Clicks link with specified id|title|alt|text.
      *
      * @When /^I follow "(?P<link_string>(?:[^"]|\\")*)"$/
@@ -180,25 +188,67 @@ class behat_general extends behat_base {
     }
 
     /**
+     * Drags and drops the specified element to the specified container. This step does not work in all the browsers, consider it experimental.
+     *
+     * The steps definitions calling this step as part of them should
+     * manage the wait times by themselves as the times and when the
+     * waits should be done depends on what is being dragged & dropper.
+     *
+     * @Given /^I drag "(?P<element_string>(?:[^"]|\\")*)" "(?P<selector1_string>(?:[^"]|\\")*)" and I drop it in "(?P<container_element_string>(?:[^"]|\\")*)" "(?P<selector2_string>(?:[^"]|\\")*)"$/
+     * @param string $element
+     * @param string $selectortype
+     * @param string $containerelement
+     * @param string $containerselectortype
+     */
+    public function i_drag_and_i_drop_it_in($element, $selectortype, $containerelement, $containerselectortype) {
+
+        list($sourceselector, $sourcelocator) = $this->transform_selector($selectortype, $element);
+        $sourcexpath = $this->getSession()->getSelectorsHandler()->selectorToXpath($sourceselector, $sourcelocator);
+
+        list($containerselector, $containerlocator) = $this->transform_selector($containerselectortype, $containerelement);
+        $destinationxpath = $this->getSession()->getSelectorsHandler()->selectorToXpath($containerselector, $containerlocator);
+
+        $this->getSession()->getDriver()->dragTo($sourcexpath, $destinationxpath);
+    }
+
+    /**
      * Checks, that page contains specified text.
      *
-     * @see Behat\MinkExtension\Context\MinkContext
      * @Then /^I should see "(?P<text_string>(?:[^"]|\\")*)"$/
+     * @throws ExpectationException
      * @param string $text
      */
     public function assert_page_contains_text($text) {
-        $this->assertSession()->pageTextContains($text);
+
+        $xpathliteral = $this->getSession()->getSelectorsHandler()->xpathLiteral($text);
+        $xpath = "/descendant::*[contains(., " . $xpathliteral. ")]";
+
+        // Wait until it finds the text, otherwise custom exception.
+        try {
+            $this->find('xpath', $xpath);
+        } catch (ElementNotFoundException $e) {
+            throw new ExpectationException('"' . $text . '" text was not found in the page', $this->getSession());
+        }
     }
 
     /**
      * Checks, that page doesn't contain specified text.
      *
-     * @see Behat\MinkExtension\Context\MinkContext
      * @Then /^I should not see "(?P<text_string>(?:[^"]|\\")*)"$/
+     * @throws ExpectationException
      * @param string $text
      */
     public function assert_page_not_contains_text($text) {
-        $this->assertSession()->pageTextNotContains($text);
+
+        $xpathliteral = $this->getSession()->getSelectorsHandler()->xpathLiteral($text);
+        $xpath = "/descendant::*[not(contains(., " . $xpathliteral. "))]";
+
+        // Wait until it finds the text, otherwise custom exception.
+        try {
+            $this->find('xpath', $xpath);
+        } catch (ElementNotFoundException $e) {
+            throw new ExpectationException('"' . $text . '" text was found in the page', $this->getSession());
+        }
     }
 
     /**

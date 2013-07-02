@@ -105,6 +105,9 @@ function make_log_url($module, $url) {
         case 'role':
             $url = '/'.$url;
             break;
+        case 'grade':
+            $url = "/grade/$url";
+            break;
         default:
             $url = "/mod/$module/$url";
             break;
@@ -1579,38 +1582,6 @@ function delete_mod_from_section($modid, $sectionid) {
 }
 
 /**
- * Moves a section up or down by 1. CANNOT BE USED DIRECTLY BY AJAX!
- *
- * @param object $course course object
- * @param int $section Section number (not id!!!)
- * @param int $move (-1 or 1)
- * @return boolean true if section moved successfully
- * @todo MDL-33379 remove this function in 2.5
- */
-function move_section($course, $section, $move) {
-    debugging('This function will be removed before 2.5 is released please use move_section_to', DEBUG_DEVELOPER);
-
-/// Moves a whole course section up and down within the course
-    global $USER;
-
-    if (!$move) {
-        return true;
-    }
-
-    $sectiondest = $section + $move;
-
-    // compartibility with course formats using field 'numsections'
-    $courseformatoptions = course_get_format($course)->get_format_options();
-    if (array_key_exists('numsections', $courseformatoptions) &&
-            $sectiondest > $courseformatoptions['numsections'] or $sectiondest < 1) {
-        return false;
-    }
-
-    $retval = move_section_to($course, $section, $sectiondest);
-    return $retval;
-}
-
-/**
  * Moves a section within a course, from a position to another.
  * Be very careful: $section and $destination refer to section number,
  * not id!.
@@ -2349,7 +2320,7 @@ function update_course($data, $editoroptions = NULL) {
         // prevent nulls and 0 in category field
         unset($data->category);
     }
-    $movecat = (isset($data->category) and $oldcourse->category != $data->category);
+    $changesincoursecat = $movecat = (isset($data->category) and $oldcourse->category != $data->category);
 
     if (!isset($data->visible)) {
         // data not from form, add missing visibility info
@@ -2359,6 +2330,7 @@ function update_course($data, $editoroptions = NULL) {
     if ($data->visible != $oldcourse->visible) {
         // reset the visibleold flag when manually hiding/unhiding course
         $data->visibleold = $data->visible;
+        $changesincoursecat = true;
     } else {
         if ($movecat) {
             $newcategory = $DB->get_record('course_categories', array('id'=>$data->category));
@@ -2387,6 +2359,9 @@ function update_course($data, $editoroptions = NULL) {
     fix_course_sortorder();
     // purge appropriate caches in case fix_course_sortorder() did not change anything
     cache_helper::purge_by_event('changesincourse');
+    if ($changesincoursecat) {
+        cache_helper::purge_by_event('changesincoursecat');
+    }
 
     // Test for and remove blocks which aren't appropriate anymore
     blocks_remove_inappropriate($course);

@@ -183,6 +183,7 @@ if ((!empty($moveupcat) or !empty($movedowncat)) and confirm_sesskey()) {
     if ($swapcategory and $movecategory) {
         $DB->set_field('course_categories', 'sortorder', $swapcategory->sortorder, array('id' => $movecategory->id));
         $DB->set_field('course_categories', 'sortorder', $movecategory->sortorder, array('id' => $swapcategory->id));
+        cache_helper::purge_by_event('changesincoursecat');
         add_to_log(SITEID, "category", "move", "editcategory.php?id=$movecategory->id", $movecategory->id);
     }
 
@@ -314,8 +315,6 @@ if (can_edit_in_category()) {
     $PAGE->set_button($courserenderer->course_search_form('', 'navbar'));
 }
 
-$displaylist[0] = get_string('top');
-
 // Start output.
 echo $OUTPUT->header();
 
@@ -345,6 +344,7 @@ if (!empty($searchcriteria)) {
     echo html_writer::table($table);
 } else {
     // Print the category selector.
+    $displaylist = coursecat::make_categories_list();
     $select = new single_select(new moodle_url('/course/manage.php'), 'categoryid', $displaylist, $coursecat->id, null, 'switchcategory');
     $select->set_label(get_string('categories').':');
 

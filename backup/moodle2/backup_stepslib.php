@@ -1489,6 +1489,7 @@ class backup_main_structure_step extends backup_structure_step {
         $info['backup_date']    = time();
         $info['backup_uniqueid']= $this->get_backupid();
         $info['mnet_remoteusers']=backup_controller_dbops::backup_includes_mnet_remote_users($this->get_backupid());
+        $info['include_files'] = backup_controller_dbops::backup_includes_files($this->get_backupid());
         $info['include_file_references_to_external_content'] =
                 backup_controller_dbops::backup_includes_file_references($this->get_backupid());
         $info['original_wwwroot']=$CFG->wwwroot;
@@ -1510,7 +1511,7 @@ class backup_main_structure_step extends backup_structure_step {
 
         $information = new backup_nested_element('information', null, array(
             'name', 'moodle_version', 'moodle_release', 'backup_version',
-            'backup_release', 'backup_date', 'mnet_remoteusers', 'include_file_references_to_external_content', 'original_wwwroot',
+            'backup_release', 'backup_date', 'mnet_remoteusers', 'include_files', 'include_file_references_to_external_content', 'original_wwwroot',
             'original_site_identifier_hash', 'original_course_id',
             'original_course_fullname', 'original_course_shortname', 'original_course_startdate',
             'original_course_contextid', 'original_system_contextid'));
@@ -1810,6 +1811,10 @@ class backup_questions_structure_step extends backup_structure_step {
         $qhint = new backup_nested_element('question_hint', array('id'), array(
             'hint', 'hintformat', 'shownumcorrect', 'clearwrong', 'options'));
 
+        $tags = new backup_nested_element('tags');
+
+        $tag = new backup_nested_element('tag', array('id'), array('name', 'rawname'));
+
         // Build the tree
 
         $qcategories->add_child($qcategory);
@@ -1817,6 +1822,9 @@ class backup_questions_structure_step extends backup_structure_step {
         $questions->add_child($question);
         $question->add_child($qhints);
         $qhints->add_child($qhint);
+
+        $question->add_child($tags);
+        $tags->add_child($tag);
 
         // Define the sources
 
@@ -1836,6 +1844,12 @@ class backup_questions_structure_step extends backup_structure_step {
                 WHERE questionid = :questionid
                 ORDER BY id',
                 array('questionid' => backup::VAR_PARENTID));
+
+        $tag->set_source_sql("SELECT t.id, t.name, t.rawname
+                              FROM {tag} t
+                              JOIN {tag_instance} ti ON ti.tagid = t.id
+                              WHERE ti.itemid = ?
+                              AND ti.itemtype = 'question'", array(backup::VAR_PARENTID));
 
         // don't need to annotate ids nor files
         // (already done by {@link backup_annotate_all_question_files}

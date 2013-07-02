@@ -1,7 +1,7 @@
 @core @core_cohort
 Feature: Add cohorts of users
   In order to create site-wide groups
-  As a moodle admin
+  As an admin
   I need to create cohorts and add users on them
 
   Background:
@@ -12,7 +12,7 @@ Feature: Add cohorts of users
       | user3 | Third | User | third@user.com |
       | user4 | Forth | User | forth@user.com |
     And I log in as "admin"
-    And I expand "Front page settings" node
+    And I collapse "Front page settings" node
     And I expand "Site administration" node
     And I expand "Users" node
     And I expand "Accounts" node

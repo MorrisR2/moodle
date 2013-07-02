@@ -107,22 +107,32 @@ if (!empty($CFG->behat_switchcompletely)) {
 // Test environment is enabled if:
 // * User has previously enabled through admin/tool/behat/cli/util.php --enable.
 // Both are required to switch to test mode
-if (!empty($CFG->behat_dataroot) && !empty($CFG->behat_prefix) && file_exists($CFG->behat_dataroot)) {
+if (!defined('BEHAT_SITE_RUNNING') && !empty($CFG->behat_dataroot) &&
+        !empty($CFG->behat_prefix) && file_exists($CFG->behat_dataroot)) {
 
     $CFG->behat_dataroot = realpath($CFG->behat_dataroot);
 
     $switchcompletely = !empty($CFG->behat_switchcompletely) && php_sapi_name() !== 'cli';
     $builtinserver = php_sapi_name() === 'cli-server';
-    $behatrunning = defined('BEHAT_RUNNING');
+    $behatrunning = defined('BEHAT_TEST');
     $testenvironmentrequested = $switchcompletely || $builtinserver || $behatrunning;
 
     // Only switch to test environment if it has been enabled.
     $testenvironmentenabled = file_exists($CFG->behat_dataroot . '/behat/test_environment_enabled.txt');
 
     if ($testenvironmentenabled && $testenvironmentrequested) {
+
+        // Constant used to inform that the behat test site is being used,
+        // this includes all the processes executed by the behat CLI command like
+        // the site reset, the steps executed by the browser drivers when simulating
+        // a user session and a real session when browsing manually to $CFG->behat_wwwroot
+        // like the browser driver does automatically.
+        // Different from BEHAT_TEST as only this last one can perform CLI
+        // actions like reset the site or use data generators.
+        define('BEHAT_SITE_RUNNING', true);
+
         $CFG->wwwroot = $CFG->behat_wwwroot;
         $CFG->passwordsaltmain = 'moodle';
-        $CFG->originaldataroot = $CFG->dataroot;
         $CFG->prefix = $CFG->behat_prefix;
         $CFG->dataroot = $CFG->behat_dataroot;
     }
@@ -279,6 +289,8 @@ umask(0000);
 $CFG->yui2version = '2.9.0';
 $CFG->yui3version = '3.9.1';
 
+// core_component can be used in any scripts, it does not need anything else.
+require_once($CFG->libdir .'/classes/component.php');
 
 // special support for highly optimised scripts that do not need libraries and DB connection
 if (defined('ABORT_AFTER_CONFIG')) {
@@ -455,6 +467,13 @@ if (!PHPUNIT_TEST or PHPUNIT_UTIL) {
     set_error_handler('default_error_handler', E_ALL | E_STRICT);
 }
 
+// Acceptance tests needs special output to capture the errors,
+// but not necessary for behat CLI command.
+if (defined('BEHAT_SITE_RUNNING') && !defined('BEHAT_TEST')) {
+    require_once(__DIR__ . '/behat/lib.php');
+    set_error_handler('behat_error_handler', E_ALL | E_STRICT);
+}
+
 // If there are any errors in the standard libraries we want to know!
 error_reporting(E_ALL | E_STRICT);
 
@@ -486,6 +505,13 @@ ini_set('include_path', $CFG->libdir.'/pear' . PATH_SEPARATOR . ini_get('include
 //point zend include path to moodles lib/zend so that includes and requires will search there for files before anywhere else
 //please note zend library is supposed to be used only from web service protocol classes, it may be removed in future
 ini_set('include_path', $CFG->libdir.'/zend' . PATH_SEPARATOR . ini_get('include_path'));
+
+// Register our classloader, in theory somebody might want to replace it to load other hacked core classes.
+if (defined('COMPONENT_CLASSLOADER')) {
+    spl_autoload_register(COMPONENT_CLASSLOADER);
+} else {
+    spl_autoload_register('core_component::classloader');
+}
 
 // Load up standard libraries
 require_once($CFG->libdir .'/textlib.class.php');   // Functions to handle multibyte strings

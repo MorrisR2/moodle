@@ -696,7 +696,7 @@ abstract class lesson_add_page_form_base extends moodleform {
         $mform = $this->_form;
         $editoroptions = $this->_customdata['editoroptions'];
 
-        $mform->addElement('header', 'qtypeheading', get_string('addaquestionpage', 'lesson', get_string($this->qtypestring, 'lesson')));
+        $mform->addElement('header', 'qtypeheading', get_string('createaquestionpage', 'lesson', get_string($this->qtypestring, 'lesson')));
 
         $mform->addElement('hidden', 'id');
         $mform->setType('id', PARAM_INT);
@@ -722,6 +722,7 @@ abstract class lesson_add_page_form_base extends moodleform {
 
         if ($this->_customdata['edit'] === true) {
             $mform->addElement('hidden', 'edit', 1);
+            $mform->setType('edit', PARAM_BOOL);
             $this->add_action_buttons(get_string('cancel'), get_string('savepage', 'lesson'));
         } else if ($this->qtype === 'questiontype') {
             $this->add_action_buttons(get_string('cancel'), get_string('addaquestionpage', 'lesson'));
@@ -761,10 +762,12 @@ abstract class lesson_add_page_form_base extends moodleform {
         if ($label === null) {
             $label = get_string("score", "lesson");
         }
+
         if (is_int($name)) {
             $name = "score[$name]";
         }
         $this->_form->addElement('text', $name, $label, array('size'=>5));
+        $this->_form->setType($name, PARAM_INT);
         if ($value !== null) {
             $this->_form->setDefault($name, $value);
         }

@@ -899,8 +899,9 @@ class navigation_node_collection implements IteratorAggregate {
         $child = $this->get($key, $type);
         if ($child !== false) {
             foreach ($this->collection as $colkey => $node) {
-                if ($node->key == $key && $node->type == $type) {
+                if ($node->key === $key && $node->type == $type) {
                     unset($this->collection[$colkey]);
+                    $this->collection = array_values($this->collection);
                     break;
                 }
             }
@@ -2447,9 +2448,9 @@ class global_navigation extends navigation_node {
         }
 
         // Badges.
-        if (!empty($CFG->enablebadges) && has_capability('moodle/badges:viewbadges', $this->page->context)) {
-            $url = new moodle_url($CFG->wwwroot . '/badges/view.php',
-                    array('type' => 2, 'id' => $course->id));
+        if (!empty($CFG->enablebadges) && !empty($CFG->badges_allowcoursebadges) &&
+            has_capability('moodle/badges:viewbadges', $this->page->context)) {
+            $url = new moodle_url('/badges/view.php', array('type' => 2, 'id' => $course->id));
 
             $coursenode->add(get_string('coursebadges', 'badges'), null,
                     navigation_node::TYPE_CONTAINER, null, 'coursebadges');
@@ -2651,7 +2652,7 @@ class global_navigation extends navigation_node {
             list($sql, $params) = $DB->get_in_or_equal($categoryids);
             $categories = $DB->get_recordset_select('course_categories', 'id '.$sql.' AND parent = 0', $params, 'sortorder, id');
             foreach ($categories as $category) {
-                $this->add_category($category, $this->rootnodes['mycourses']);
+                $this->add_category($category, $this->rootnodes['mycourses'], self::TYPE_MY_CATEGORY);
             }
             $categories->close();
         } else {
@@ -3489,7 +3490,7 @@ class settings_navigation extends navigation_node {
             $coursenode->force_open();
         }
 
-        if (has_capability('moodle/course:update', $coursecontext)) {
+        if ($this->page->user_allowed_editing()) {
             // Add the turn on/off settings
 
             if ($this->page->url->compare(new moodle_url('/course/view.php'), URL_MATCH_BASE)) {
@@ -3509,8 +3510,10 @@ class settings_navigation extends navigation_node {
                 $editurl->param('edit', 'on');
                 $editstring = get_string('turneditingon');
             }
-            $coursenode->add($editstring, $editurl, self::TYPE_SETTING, null, null, new pix_icon('i/edit', ''));
+            $coursenode->add($editstring, $editurl, self::TYPE_SETTING, null, 'turneditingonoff', new pix_icon('i/edit', ''));
+        }
 
+        if (has_capability('moodle/course:update', $coursecontext)) {
             // Add the course settings link
             $url = new moodle_url('/course/edit.php', array('id'=>$course->id));
             $coursenode->add(get_string('editsettings'), $url, self::TYPE_SETTING, null, 'editsettings', new pix_icon('i/settings', ''));
@@ -3518,7 +3521,7 @@ class settings_navigation extends navigation_node {
             // Add the course completion settings link
             if ($CFG->enablecompletion && $course->enablecompletion) {
                 $url = new moodle_url('/course/completion.php', array('id'=>$course->id));
-                $coursenode->add(get_string('completion', 'completion'), $url, self::TYPE_SETTING, null, null, new pix_icon('i/settings', ''));
+                $coursenode->add(get_string('coursecompletion', 'completion'), $url, self::TYPE_SETTING, null, null, new pix_icon('i/settings', ''));
             }
         }
 
@@ -3906,10 +3909,11 @@ class settings_navigation extends navigation_node {
                 }
             } else {
                 $canviewusercourse = has_capability('moodle/user:viewdetails', $coursecontext);
-                $canaccessallgroups = has_capability('moodle/site:accessallgroups', $coursecontext);
-                if ((!$canviewusercourse && !$canviewuser) || !can_access_course($course, $user->id)) {
+                $userisenrolled = is_enrolled($coursecontext, $user->id);
+                if ((!$canviewusercourse && !$canviewuser) || !$userisenrolled) {
                     return false;
                 }
+                $canaccessallgroups = has_capability('moodle/site:accessallgroups', $coursecontext);
                 if (!$canaccessallgroups && groups_get_course_groupmode($course) == SEPARATEGROUPS) {
                     // If groups are in use, make sure we can see that group
                     return false;
@@ -4030,23 +4034,6 @@ class settings_navigation extends navigation_node {
             $usersetting->add(get_string('securitykeys', 'webservice'), $url, self::TYPE_SETTING);
         }
 
-        // Repository
-        if (!$currentuser && $usercontext->contextlevel == CONTEXT_USER) {
-            if (!$this->cache->cached('contexthasrepos'.$usercontext->id)) {
-                require_once($CFG->dirroot . '/repository/lib.php');
-                $editabletypes = repository::get_editable_types($usercontext);
-                $haseditabletypes = !empty($editabletypes);
-                unset($editabletypes);
-                $this->cache->set('contexthasrepos'.$usercontext->id, $haseditabletypes);
-            } else {
-                $haseditabletypes = $this->cache->{'contexthasrepos'.$usercontext->id};
-            }
-            if ($haseditabletypes) {
-                $url = new moodle_url('/repository/manage_instances.php', array('contextid'=>$usercontext->id));
-                $usersetting->add(get_string('repositories', 'repository'), $url, self::TYPE_SETTING);
-            }
-        }
-
         // Messaging
         if (($currentuser && has_capability('moodle/user:editownmessageprofile', $systemcontext)) || (!isguestuser($user) && has_capability('moodle/user:editmessageprofile', $usercontext) && !is_primary_admin($user->id))) {
             $url = new moodle_url('/message/edit.php', array('id'=>$user->id));
@@ -4079,7 +4066,7 @@ class settings_navigation extends navigation_node {
             $reportfunction($reporttab, $user, $course);
         }
         $anyreport = has_capability('moodle/user:viewuseractivitiesreport', $usercontext);
-        if ($anyreport || ($course->showreports && $currentuser && $forceforcontext)) {
+        if ($anyreport || ($course->showreports && $currentuser)) {
             // Add grade hardcoded grade report if necessary.
             $gradeaccess = false;
             if (has_capability('moodle/grade:viewall', $coursecontext)) {
@@ -4104,7 +4091,6 @@ class settings_navigation extends navigation_node {
         }
         // Check the number of nodes in the report node... if there are none remove the node
         $reporttab->trim_if_empty();
-
 
         // Login as ...
         if (!$user->deleted and !$currentuser && !session_is_loggedinas() && has_capability('moodle/user:loginas', $coursecontext) && !is_siteadmin($user->id)) {
@@ -4244,7 +4230,7 @@ class settings_navigation extends navigation_node {
         }
         $frontpage->id = 'frontpagesettings';
 
-        if (has_capability('moodle/course:update', $coursecontext)) {
+        if ($this->page->user_allowed_editing()) {
 
             // Add the turn on/off settings
             $url = new moodle_url('/course/view.php', array('id'=>$course->id, 'sesskey'=>sesskey()));
@@ -4256,7 +4242,9 @@ class settings_navigation extends navigation_node {
                 $editstring = get_string('turneditingon');
             }
             $frontpage->add($editstring, $url, self::TYPE_SETTING, null, null, new pix_icon('i/edit', ''));
+        }
 
+        if (has_capability('moodle/course:update', $coursecontext)) {
             // Add the course settings link
             $url = new moodle_url('/admin/settings.php', array('section'=>'frontpagesettings'));
             $frontpage->add(get_string('editsettings'), $url, self::TYPE_SETTING, null, null, new pix_icon('i/settings', ''));

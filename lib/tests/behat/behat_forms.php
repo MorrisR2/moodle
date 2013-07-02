@@ -81,7 +81,7 @@ class behat_forms extends behat_base {
             $fieldnode = $this->find_field($locator);
 
             // Gets the field type from a parent node.
-            $field = behat_field_manager::get_field($fieldnode, $locator, $this->getSession());
+            $field = behat_field_manager::get_form_field($fieldnode, $this->getSession());
 
             // Delegates to the field class.
             $field->set_value($value);
@@ -132,7 +132,8 @@ class behat_forms extends behat_base {
 
             // Show all fields.
             $showmorestr = get_string('showmore', 'form');
-            $showmores = $this->find_all('xpath', "//a[contains(concat(' ', normalize-space(.), ' '), '" . $showmorestr . "')][contains(concat(' ', normalize-space(@class), ' '), ' moreless-toggler')]");
+            $showmores = $this->find_all('xpath', "//a[contains(concat(' ', normalize-space(.), ' '), '" . $showmorestr . "')]" .
+                "[contains(concat(' ', normalize-space(@class), ' '), ' moreless-toggler')]");
 
             // We are supposed to have 'show more's here, otherwise exception.
 
@@ -177,7 +178,23 @@ class behat_forms extends behat_base {
 
         // Adding a click as Selenium requires it to fire some JS events.
         if ($this->running_javascript()) {
-            $selectnode->click();
+
+            // In some browsers the selectOption actions can perform a page reload
+            // so we need to ensure the element is still available to continue interacting
+            // with it. We don't wait here.
+            if (!$this->getSession()->getDriver()->find($selectnode->getXpath())) {
+                return;
+            }
+
+            if (!$selectnode->hasAttribute('multiple')) {
+                // Single select needs an extra click in the option.
+                $xpath = ".//option[(./@value = '" . $option . "' or contains(normalize-space(string(.)), '" . $option . "'))]";
+                $optionnode = $this->find('xpath', $xpath, false, $selectnode);
+                $optionnode->click();
+            } else {
+                // Multiple ones needs the click in the select.
+                $selectnode->click();
+            }
         }
     }
 
@@ -239,7 +256,7 @@ class behat_forms extends behat_base {
         $fieldnode = $this->find_field($locator);
 
         // Get the field.
-        $field = behat_field_manager::get_field($fieldnode, $locator, $this->getSession());
+        $field = behat_field_manager::get_form_field($fieldnode, $this->getSession());
         $fieldvalue = $field->get_value();
 
         // Checks if the provided value matches the current field value.
