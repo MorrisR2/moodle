@@ -1142,7 +1142,7 @@ class question_bank_view {
 
     // $category is no longer required. Accepted for backwards compatibility, but ignored.
     protected function build_query($recurse, $showhidden) {
-        function build_query_sql($recurse, $showhidden);
+        build_query_sql(null,$recurse, $showhidden);
     }
     protected function build_query_sql($category_deprecated, $recurse, $showhidden) {
         global $DB;
