@@ -71,8 +71,8 @@ question_bank_search = {
         question_bank_search.advsearch = Y.one('#advancedsearch');
 
         question_bank_search.advsearch.hide();
-        question_bank_search.chkshowhideadvsearch = document.getElementById('showhideadvsearch');
-        Y.YUI2.util.Event.addListener(question_bank_search.chkshowhideadvsearch, 'click', question_bank_search.advancedsearch_click);
+        question_bank_search.chkshowhideadvsearch = Y.one('#showhideadvsearch');
+        question_bank_search.chkshowhideadvsearch.on('click', question_bank_search.advancedsearch_click);
     },
 
     advancedsearch_click: function(e) {
