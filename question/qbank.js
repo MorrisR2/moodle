@@ -59,6 +59,33 @@ question_bank = {
     }
 };
 
+question_bank_search = {
+    strshowmore: '',
+    strshowless: '',
+    advsearch: null,
+    chkshowhideadvsearch: null,
+
+    init_showmoreless: function(Y, showmore, showless) {
+        question_bank_search.showmore = showmore;
+        question_bank_search.showless = showless;
+        question_bank_search.advsearch = Y.one('#advancedsearch');
+
+        question_bank_search.advsearch.hide();
+        question_bank_search.chkshowhideadvsearch = document.getElementById('showhideadvsearch');
+        Y.YUI2.util.Event.addListener(question_bank_search.chkshowhideadvsearch, 'click', question_bank_search.advancedsearch_click);
+    },
+
+    advancedsearch_click: function(e) {
+        question_bank_search.advsearch.toggleView();
+        if (question_bank_search.advsearch.getAttribute('hidden') || question_bank_search.advsearch.getStyle('display') == 'none') {
+            question_bank_search.chkshowhideadvsearch.setHTML(question_bank_search.showmore);
+        } else {
+            question_bank_search.chkshowhideadvsearch.setHTML(question_bank_search.showless);
+        }
+    }
+
+};
+
 // JavaScript to make the list of question types pop-up when you click an add
 // add question button.
 qtype_chooser = {
