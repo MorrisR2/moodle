@@ -37,7 +37,6 @@ function atto_html_init_editor($elementid) {
                                 'M.atto_html.init',
                                 array(array('elementid'=>$elementid, 'icon'=>$icon)),
                                 true);
-
 }
 
 /**
