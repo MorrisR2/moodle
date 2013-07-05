@@ -1140,11 +1140,21 @@ class question_bank_view {
         return $this->baseurl->out(true, $this->sort_to_params($newsort));
     }
 
-    // $category is no longer required. Accepted for backwards compatibility, but ignored.
-    protected function build_query($recurse, $showhidden) {
-        build_query_sql(null,$recurse, $showhidden);
+    /**
+     * Create the SQL query to retrieve the indicated questions, based on question_bank_search_condition filters
+     */
+    protected function build_query() {
+        build_query_sql(null, null, null);
     }
-    protected function build_query_sql($category_deprecated, $recurse, $showhidden) {
+
+    /**
+     * Create the SQL query to retrieve the indicated questions
+     * @deprecated Use build_query() instead
+     * @param int $category category to list. Moved to question_bank_search_condition_category
+     * @param bool $recurse include subcategories. Moved to question_bank_search_condition_category
+     * @param bool $showhidden include old "deleted" questions. Moved to question_bank_search_condition_hide
+     */
+    protected function build_query_sql($category, $recurse, $showhidden) {
         global $DB;
 
     /// Get the required tables.
@@ -1253,12 +1263,12 @@ class question_bank_view {
         array_unshift($this->searchconditions, new question_bank_search_condition_hide(! $showhidden));
         array_unshift($this->searchconditions, new question_bank_search_condition_category($cat, $recurse, $editcontexts, $this->baseurl, $this->course));
 
-        $this->display_options($recurse, $showhidden, $showquestiontext);
+        $this->display_options();
 
         // continues with list of questions
         $this->display_question_list($this->contexts->having_one_edit_tab_cap($tabname),
                 $this->baseurl, $cat, $this->cm,
-                $recurse, $page, $perpage, $showhidden, $showquestiontext,
+                null, $page, $perpage, $showhidden, $showquestiontext,
                 $this->contexts->having_cap('moodle/question:add'));
     }
 
@@ -1303,7 +1313,7 @@ class question_bank_view {
         echo "</div>\n";
     }
 
-    protected function display_options($recurse, $showhidden, $showquestiontext) {
+    protected function display_options() {
         echo '<form method="get" action="edit.php" id="displayoptions">';
         echo "<fieldset class='invisiblefieldset'>";
         echo html_writer::input_hidden_params($this->baseurl, array('recurse', 'showhidden', 'qbshowtext'));
@@ -1311,7 +1321,7 @@ class question_bank_view {
         foreach ($this->searchconditions as $searchcondition) {
             echo $searchcondition->display_options($this);
         }
-        $this->advancedsearch($recurse, $showhidden);
+        $this->display_advanced_search_form();
 
         echo '<noscript><div class="centerpara"><input type="submit" value="'. get_string('go') .'" />';
         echo '</div></noscript></fieldset></form>';
@@ -1331,7 +1341,7 @@ class question_bank_view {
         echo "</div>\n";
     }
 
-    protected function advancedsearch ($recurse, $showhidden) {
+    protected function display_advanced_search_form() {
         global $PAGE;
         echo "<div id=\"advancedsearch\">\n";
         foreach ($this->searchconditions as $searchcondition) {
@@ -1371,8 +1381,8 @@ class question_bank_view {
     * @param int $recurse     This is 1 if subcategories should be included, 0 otherwise
     * @param int $page        The number of the page to be displayed
     * @param int $perpage     Number of questions to show per page
-    * @param bool $showhidden   True if also hidden questions should be displayed
-    * @param bool $showquestiontext whether the text of each question should be shown in the list
+    * @param bool $showhidden   True if also hidden questions should be displayed. Deprecated.
+    * @param bool $showquestiontext whether the text of each question should be shown in the list. Deprecated.
     */
     protected function display_question_list($contexts, $pageurl, $categoryandcontext,
             $cm = null, $recurse=1, $page=0, $perpage=100, $showhidden=false,
@@ -1398,7 +1408,7 @@ class question_bank_view {
 
         $this->create_new_question_form($category, $canadd);
 
-        $this->build_query($recurse, $showhidden);
+        $this->build_query();
         $totalnumber = $this->get_question_count();
         if ($totalnumber == 0) {
             return;
