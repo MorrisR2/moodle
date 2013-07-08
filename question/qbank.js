@@ -59,6 +59,52 @@ question_bank = {
     }
 };
 
+question_bank_search = {
+    strshowmore: '',
+    strshowless: '',
+    advsearch: null,
+    chkshowhideadvsearch: null,
+
+    init_showmoreless: function(Y, showmore, showless, expand) {
+        question_bank_search.showmore = showmore;
+        question_bank_search.showless = showless;
+        question_bank_search.advsearch = Y.one('#advancedsearch');
+        
+        if (! expand) {
+            question_bank_search.advsearch.hide();
+        }
+        question_bank_search.chkshowhideadvsearch = Y.one('#showhideadvsearch');
+        question_bank_search.chkshowhideadvsearch.on('click', question_bank_search.advancedsearch_click);
+    },
+
+    advancedsearch_click: function(e) {
+        question_bank_search.advsearch.toggleView();
+        if (question_bank_search.advsearch.getAttribute('hidden') || question_bank_search.advsearch.getStyle('display') == 'none') {
+            question_bank_search.chkshowhideadvsearch.setHTML(question_bank_search.showmore);
+            Y.one('#expandadvanced').set('value', 0);
+        } else {
+            question_bank_search.chkshowhideadvsearch.setHTML(question_bank_search.showless);
+            Y.one('#expandadvanced').set('value', 1);
+        }
+    },
+
+    options_autosubmit: function(e) {
+        optionsform = Y.one('form#displayoptions');
+        inputs = optionsform.all('input, select');
+        inputs.each( function(input) { input.on('change', question_bank_search.option_changed) } );
+        Y.one('input#showhidden_on').on('change', question_bank_search.toggle_checkbox_default);
+    },
+
+    option_changed: function(e) {
+        e.target.getDOMNode().form.submit();
+    },
+
+    toggle_checkbox_default: function(e) {
+        hiddenfield = Y.one('#' + e.target.get('name') + '_hidden');
+        hiddenfield.set('value', ! e.target.get('checked')); 
+    }
+};
+
 // JavaScript to make the list of question types pop-up when you click an add
 // add question button.
 qtype_chooser = {
