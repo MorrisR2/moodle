@@ -772,7 +772,8 @@ class question_bank_delete_action_column extends question_bank_action_column_bas
                 $url = new moodle_url($this->qbank->base_url(), array('unhide' => $question->id, 'sesskey'=>sesskey()));
                 $this->print_icon('t/restore', $this->strrestore, $url);
             } else {
-                $url = new moodle_url($this->qbank->base_url(), array('deleteselected' => $question->id, 'q' . $question->id => 1, 'sesskey'=>sesskey()));
+                $url = new moodle_url($this->qbank->base_url(), 
+                                      array('deleteselected' => $question->id, 'q' . $question->id => 1, 'sesskey'=>sesskey()));
                 $this->print_icon('t/delete', $this->strdelete, $url);
             }
         }
@@ -1146,8 +1147,8 @@ class question_bank_view {
      * Create the SQL query to retrieve the indicated questions, based on question_bank_search_condition filters
      */
     protected function build_query() {
-        $this->build_query_sql(null, null, null);
-     }
+        self::build_query_sql(null, null, null);
+    }
 
     /**
      * Create the SQL query to retrieve the indicated questions
@@ -1159,7 +1160,7 @@ class question_bank_view {
     protected function build_query_sql($category, $recurse, $showhidden) {
         global $DB;
 
-    /// Get the required tables.
+        // Get the required tables.
         $joins = array();
         foreach ($this->requiredcolumns as $column) {
             $extrajoins = $column->get_extra_joins();
@@ -1171,7 +1172,7 @@ class question_bank_view {
             }
         }
 
-    /// Get the required fields.
+        // Get the required fields.
         $fields = array('q.hidden', 'q.category');
         foreach ($this->visiblecolumns as $column) {
             $fields = array_merge($fields, $column->get_required_fields());
@@ -1181,14 +1182,14 @@ class question_bank_view {
         }
         $fields = array_unique($fields);
 
-    /// Build the order by clause.
+        // Build the order by clause.
         $sorts = array();
         foreach ($this->sort as $sort => $order) {
             list($colname, $subsort) = $this->parse_subsort($sort);
             $sorts[] = $this->requiredcolumns[$colname]->sort_expression($order < 0, $subsort);
         }
 
-    /// Build the where clause.
+        // Build the where clause.
         $tests = array('q.parent = 0');
         $this->sqlparams = array();
         foreach ($this->searchconditions as $searchcondition) {
@@ -1200,7 +1201,7 @@ class question_bank_view {
             }
         }
 
-    /// Build the SQL.
+        // Build the SQL.
         $sql = ' FROM {question} q ' . implode(' ', $joins);
         $sql .= ' WHERE ' . implode(' AND ', $tests);
         $this->countsql = 'SELECT count(1)' . $sql;
@@ -1263,7 +1264,8 @@ class question_bank_view {
         // Category selection form
         echo $OUTPUT->heading(get_string('questionbank', 'question'), 2);
         array_unshift($this->searchconditions, new question_bank_search_condition_hide(! $showhidden));
-        array_unshift($this->searchconditions, new question_bank_search_condition_category($cat, $recurse, $editcontexts, $this->baseurl, $this->course));
+        array_unshift($this->searchconditions, new question_bank_search_condition_category($cat, $recurse, $editcontexts,
+                                                                                           $this->baseurl, $this->course));
 
         $this->display_options();
 
@@ -1354,7 +1356,7 @@ class question_bank_view {
         global $PAGE;
 
         $expandadvanced = optional_param('expandadvanced', false, PARAM_BOOL);
-        echo html_writer::empty_tag('input', array('type' => 'hidden', 'name' => 'expandadvanced', 
+        echo html_writer::empty_tag('input', array('type' => 'hidden', 'name' => 'expandadvanced',
                                                    'value' => $expandadvanced, 'id' => 'expandadvanced'));
         echo "<div id=\"advancedsearch\">\n";
         foreach ($this->searchconditions as $searchcondition) {
@@ -1924,7 +1926,7 @@ function print_qtype_to_add_option($qtype) {
  * (by default the question bank screen).
  *
  * @param int $categoryid The id of the category that the new question should be added to.
- * @param array $params Other paramters to add to the URL. You need either $params['cmid'] or
+ * @param array $params Other parameters to add to the URL. You need either $params['cmid'] or
  *      $params['courseid'], and you should probably set $params['returnurl']
  * @param string $caption the text to display on the button.
  * @param string $tooltip a tooltip to add to the button (optional).
@@ -1953,33 +1955,33 @@ function create_new_question_button($categoryid, $params, $caption, $tooltip = '
  */
 abstract class question_bank_search_condition {
     /**
-    * @return string An SQL fragment to be ANDed into the WHERE clause to filter which questions are shown
-    */
+     * @return string An SQL fragment to be ANDed into the WHERE clause to filter which questions are shown
+     */
     public abstract function where();
 
     /**
-    * @return array Parameters to be bound to the above WHERE clause fragment
-    */
+     * @return array Parameters to be bound to the above WHERE clause fragment
+     */
     public function params() {
         return array();
     }
 
     /**
-    * Display GUI for selecting criteria for this condition. Displayed when Show More is open.
-    * 
-    * Compare display_options(), which displays always, whether Show More is open or not.
-    * @return string HTML form fragment 
-    */
+     * Display GUI for selecting criteria for this condition. Displayed when Show More is open.
+     * 
+     * Compare display_options(), which displays always, whether Show More is open or not.
+     * @return string HTML form fragment 
+     */
     public function display_options_adv() {
         return;
     }
 
     /**
-    * Display GUI for selecting criteria for this condition. Displayed always, whether Show More is open or not.
-    * 
-    * Compare display_options_adv(), which displays when Show More is open.
-    * @return string HTML form fragment 
-    */
+     * Display GUI for selecting criteria for this condition. Displayed always, whether Show More is open or not.
+     * 
+     * Compare display_options_adv(), which displays when Show More is open.
+     * @return string HTML form fragment 
+     */
     public function display_options() {
         return;
     }
@@ -1987,8 +1989,8 @@ abstract class question_bank_search_condition {
 
 abstract class question_bank_search_condition_array {
      /**
-     * @return Returns an array of question_bank_search_condition class names (or subclasses thereof)
-     */
+      * @return Returns an array of question_bank_search_condition class names (or subclasses thereof)
+      */
     public static function get_conditions() {
         return array();
     }
@@ -2012,8 +2014,9 @@ class question_bank_search_condition_hide extends question_bank_search_condition
     }
 
     public function display_options_adv() {
-        echo html_writer::empty_tag('input', array('type' => 'hidden', 'name' => 'showhidden', 'value' => '0', 'id' => 'showhidden_hidden'));
-        echo html_writer::checkbox('showhidden', '1', (! $this->hide), get_string('showhidden', 'question'),   
+        echo html_writer::empty_tag('input', array('type' => 'hidden', 'name' => 'showhidden', 
+                                                   'value' => '0', 'id' => 'showhidden_hidden'));
+        echo html_writer::checkbox('showhidden', '1', (! $this->hide), get_string('showhidden', 'question'),
                                    array('id' => 'showhidden_on'));
     }
 }
@@ -2068,8 +2071,8 @@ class question_bank_search_condition_category extends question_bank_search_condi
     public function display_options_adv() {
         echo '<div>';
         echo html_writer::empty_tag('input', array('type' => 'hidden', 'name' => 'recurse',
-                                               'value' => 0, 'id' => 'recurse_off'));       
-        echo html_writer::checkbox('recurse', '1', $this->recurse, get_string('includesubcategories', 'question'), 
+                                               'value' => 0, 'id' => 'recurse_off'));
+        echo html_writer::checkbox('recurse', '1', $this->recurse, get_string('includesubcategories', 'question'),
                                        array('id' => 'recurse_on'));
         echo "</div>\n";
 
