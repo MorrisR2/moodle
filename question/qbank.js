@@ -69,7 +69,7 @@ question_bank_search = {
         question_bank_search.showmore = showmore;
         question_bank_search.showless = showless;
         question_bank_search.advsearch = Y.one('#advancedsearch');
-        
+
         if (! expand) {
             question_bank_search.advsearch.hide();
         }
@@ -101,7 +101,7 @@ question_bank_search = {
 
     toggle_checkbox_default: function(e) {
         hiddenfield = Y.one('#' + e.target.get('name') + '_hidden');
-        hiddenfield.set('value', ! e.target.get('checked')); 
+        hiddenfield.set('value', ! e.target.get('checked'));
     }
 };
 
