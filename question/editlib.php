@@ -792,7 +792,8 @@ class question_bank_delete_action_column extends question_bank_action_column_bas
                 $url = new moodle_url($this->qbank->base_url(), array('unhide' => $question->id, 'sesskey'=>sesskey()));
                 $this->print_icon('t/restore', $this->strrestore, $url);
             } else {
-                $url = new moodle_url($this->qbank->base_url(), array('deleteselected' => $question->id, 'q' . $question->id => 1, 'sesskey'=>sesskey()));
+                $url = new moodle_url($this->qbank->base_url(), 
+                                      array('deleteselected' => $question->id, 'q' . $question->id => 1, 'sesskey'=>sesskey()));
                 $this->print_icon('t/delete', $this->strdelete, $url);
             }
         }
@@ -802,6 +803,7 @@ class question_bank_delete_action_column extends question_bank_action_column_bas
         return array('q.id', 'q.hidden');
     }
 }
+
 
 /**
  * Base class for 'columns' that are actually displayed as a row following the main question row.
@@ -827,6 +829,7 @@ abstract class question_bank_row_base extends question_bank_column_base {
         echo "</td></tr>\n";
     }
 }
+
 
 /**
  * A column type for the name of the question name.
@@ -871,6 +874,7 @@ class question_bank_question_text_row extends question_bank_row_base {
     }
 }
 
+
 /**
  * This class prints a view of the question bank, including
  *  + Some controls to allow users to to select what is displayed.
@@ -909,6 +913,7 @@ class question_bank_view {
     protected $countsql;
     protected $loadsql;
     protected $sqlparams;
+    protected $searchconditions = array();
 
     /**
      * Constructor
@@ -946,6 +951,15 @@ class question_bank_view {
         $this->init_column_types();
         $this->init_columns($this->wanted_columns(), $this->heading_column());
         $this->init_sort();
+        $this->init_search_conditions($this->contexts, $this->course, $this->cm);
+    }
+
+    protected function init_search_conditions() {
+        foreach (get_plugin_list_with_class('local', 'question_bank_search_condition_array', 'lib.php') as $searchplugin) {
+            foreach ($searchplugin::get_conditions() as $searchclass) {
+                $this->add_searchcondition(new $searchclass);
+            }
+        }
     }
 
     protected function wanted_columns() {
@@ -1152,10 +1166,24 @@ class question_bank_view {
         return $this->baseurl->out(true, $this->sort_to_params($newsort));
     }
 
+    /**
+     * Create the SQL query to retrieve the indicated questions, based on question_bank_search_condition filters
+     */
+    protected function build_query() {
+        self::build_query_sql(null, null, null);
+    }
+
+    /**
+     * Create the SQL query to retrieve the indicated questions
+     * @deprecated Use build_query() instead.
+     * @param int $category category to list. Moved to question_bank_search_condition_category
+     * @param bool $recurse include subcategories. Moved to question_bank_search_condition_category
+     * @param bool $showhidden include old "deleted" questions. Moved to question_bank_search_condition_hide
+     */
     protected function build_query_sql($category, $recurse, $showhidden) {
         global $DB;
 
-    /// Get the required tables.
+        // Get the required tables.
         $joins = array();
         foreach ($this->requiredcolumns as $column) {
             $extrajoins = $column->get_extra_joins();
@@ -1167,7 +1195,7 @@ class question_bank_view {
             }
         }
 
-    /// Get the required fields.
+        // Get the required fields.
         $fields = array('q.hidden', 'q.category');
         foreach ($this->visiblecolumns as $column) {
             $fields = array_merge($fields, $column->get_required_fields());
@@ -1177,35 +1205,30 @@ class question_bank_view {
         }
         $fields = array_unique($fields);
 
-    /// Build the order by clause.
+        // Build the order by clause.
         $sorts = array();
         foreach ($this->sort as $sort => $order) {
             list($colname, $subsort) = $this->parse_subsort($sort);
             $sorts[] = $this->requiredcolumns[$colname]->sort_expression($order < 0, $subsort);
         }
 
-    /// Build the where clause.
+        // Build the where clause.
         $tests = array('q.parent = 0');
-
-        if (!$showhidden) {
-            $tests[] = 'q.hidden = 0';
+        $this->sqlparams = array();
+        foreach ($this->searchconditions as $searchcondition) {
+            if ($searchcondition->where()) {
+                $tests[] = '((' . $searchcondition->where() .'))';
+            }
+            if ($searchcondition->params()) {
+                $this->sqlparams = array_merge($this->sqlparams, $searchcondition->params());
+            }
         }
 
-        if ($recurse) {
-            $categoryids = question_categorylist($category->id);
-        } else {
-            $categoryids = array($category->id);
-        }
-        list($catidtest, $params) = $DB->get_in_or_equal($categoryids, SQL_PARAMS_NAMED, 'cat');
-        $tests[] = 'q.category ' . $catidtest;
-        $this->sqlparams = $params;
-
-    /// Build the SQL.
+        // Build the SQL.
         $sql = ' FROM {question} q ' . implode(' ', $joins);
         $sql .= ' WHERE ' . implode(' AND ', $tests);
         $this->countsql = 'SELECT count(1)' . $sql;
         $this->loadsql = 'SELECT ' . implode(', ', $fields) . $sql . ' ORDER BY ' . implode(', ', $sorts);
-        $this->sqlparams = $params;
     }
 
     protected function get_question_count() {
@@ -1260,22 +1283,18 @@ class question_bank_view {
             return;
         }
 
+        $editcontexts = $this->contexts->having_one_edit_tab_cap($tabname);
         // Category selection form
         echo $OUTPUT->heading(get_string('questionbank', 'question'), 2);
-
-        $this->display_category_form($this->contexts->having_one_edit_tab_cap($tabname),
-                $this->baseurl, $cat);
-        $this->display_options($recurse, $showhidden, $showquestiontext);
-
-        if (!$category = $this->get_current_category($cat)) {
-            return;
-        }
-        $this->print_category_info($category);
+        array_unshift($this->searchconditions, new question_bank_search_condition_hide(!$showhidden));
+        array_unshift($this->searchconditions, new question_bank_search_condition_category($cat, $recurse, $editcontexts,
+                                                                                           $this->baseurl, $this->course));
+        $this->display_options($showquestiontext);
 
         // continues with list of questions
         $this->display_question_list($this->contexts->having_one_edit_tab_cap($tabname),
                 $this->baseurl, $cat, $this->cm,
-                $recurse, $page, $perpage, $showhidden, $showquestiontext,
+                null, $page, $perpage, $showhidden, $showquestiontext,
                 $this->contexts->having_cap('moodle/question:add'));
     }
 
@@ -1304,44 +1323,52 @@ class question_bank_view {
         return $category;
     }
 
-    protected function print_category_info($category) {
-        $formatoptions = new stdClass();
-        $formatoptions->noclean = true;
-        $formatoptions->overflowdiv = true;
-        echo '<div class="boxaligncenter">';
-        echo format_text($category->info, $category->infoformat, $formatoptions, $this->course->id);
-        echo "</div>\n";
-    }
-
     /**
      * prints a form to choose categories
+     * @deprecated Replaced by class question_bank_search_condition_category
      */
     protected function display_category_form($contexts, $pageurl, $current) {
-        global $CFG, $OUTPUT;
+        global $OUTPUT;
 
-    /// Get all the existing categories now
         echo '<div class="choosecategory">';
         $catmenu = question_category_options($contexts, false, 0, true);
-
         $select = new single_select($this->baseurl, 'category', $catmenu, $current, null, 'catmenu');
         $select->set_label(get_string('selectacategory', 'question'));
         echo $OUTPUT->render($select);
         echo "</div>\n";
     }
 
-    protected function display_options($recurse, $showhidden, $showquestiontext) {
+    protected function display_options($showquestiontext) {
+        global $PAGE;
+
+        $showadv = optional_param('showadv', false, PARAM_BOOL);
         echo '<form method="get" action="edit.php" id="displayoptions">';
         echo "<fieldset class='invisiblefieldset'>";
+        echo html_writer::empty_tag('input', array('type' => 'hidden', 'name' => 'showadv',
+                                                   'value' => $showadv, 'id' => 'showadv'));
         echo html_writer::input_hidden_params($this->baseurl, array('recurse', 'showhidden', 'qbshowtext'));
-        $this->display_category_form_checkbox('recurse', $recurse, get_string('includesubcategories', 'question'));
-        $this->display_category_form_checkbox('showhidden', $showhidden, get_string('showhidden', 'question'));
-        $this->display_category_form_checkbox('qbshowtext', $showquestiontext, get_string('showquestiontext', 'question'));
+        foreach ($this->searchconditions as $searchcondition) {
+            echo $searchcondition->display_options($this);
+        }
+        $this->display_showtext_chk($showquestiontext);
+        $this->display_advanced_search_form();
+        $options = array('showmore'=>get_string('showmore', 'form'), 'showless'=>get_string('showless', 'form'), 'showadv'=>$showadv);
+        $PAGE->requires->yui_module('moodle-question-searchform', 'M.question.searchform.init', array($options));
         echo '<noscript><div class="centerpara"><input type="submit" value="'. get_string('go') .'" />';
         echo '</div></noscript></fieldset></form>';
     }
 
+    protected function display_showtext_chk($showquestiontext) {
+        echo '<div>';
+        echo html_writer::empty_tag('input', array('type' => 'hidden', 'name' => 'qbshowtext',
+                                               'value' => 0, 'id' => 'qbshowtext_off'));
+        echo html_writer::checkbox('qbshowtext', '1', $showquestiontext, get_string('showquestiontext', 'question'),
+                                       array('id' => 'qbshowtext_on', 'class' => 'searchoptions'));
+        echo "</div>\n";
+    }
     /**
-     * Print a single option checkbox. Used by the preceeding.
+     * Print a single option checkbox.
+     * @deprecated Instead use html_writer::checkbox and separate Javascript from HTML.
      */
     protected function display_category_form_checkbox($name, $value, $label) {
         echo '<div><input type="hidden" id="' . $name . '_off" name="' . $name . '" value="0" />';
@@ -1352,6 +1379,17 @@ class question_bank_view {
         echo ' onchange="getElementById(\'displayoptions\').submit(); return true;" />';
         echo '<label for="' . $name . '_on">' . $label . '</label>';
         echo "</div>\n";
+    }
+
+    protected function display_advanced_search_form() {
+        global $PAGE;
+
+        echo "<div id=\"advancedsearch\">\n";
+        foreach ($this->searchconditions as $searchcondition) {
+            echo $searchcondition->display_options_adv($this);
+        }
+        echo "</div>\n";
+        echo '<a href="#" class="moreless-toggler" id="showhideadvsearch">' . get_string('showmore', 'form') . "</a>\n";
     }
 
     protected function create_new_question_form($category, $canadd) {
@@ -1375,8 +1413,8 @@ class question_bank_view {
     * @param int $recurse     This is 1 if subcategories should be included, 0 otherwise
     * @param int $page        The number of the page to be displayed
     * @param int $perpage     Number of questions to show per page
-    * @param bool $showhidden   True if also hidden questions should be displayed
-    * @param bool $showquestiontext whether the text of each question should be shown in the list
+    * @param bool $showhidden   True if also hidden questions should be displayed. Deprecated.
+    * @param bool $showquestiontext whether the text of each question should be shown in the list. Deprecated.
     */
     protected function display_question_list($contexts, $pageurl, $categoryandcontext,
             $cm = null, $recurse=1, $page=0, $perpage=100, $showhidden=false,
@@ -1402,7 +1440,7 @@ class question_bank_view {
 
         $this->create_new_question_form($category, $canadd);
 
-        $this->build_query_sql($category, $recurse, $showhidden);
+        $this->build_query();
         $totalnumber = $this->get_question_count();
         if ($totalnumber == 0) {
             return;
@@ -1420,8 +1458,7 @@ class question_bank_view {
         echo '<form method="post" action="edit.php">';
         echo '<fieldset class="invisiblefieldset" style="display: block;">';
         echo '<input type="hidden" name="sesskey" value="'.sesskey().'" />';
-        echo html_writer::input_hidden_params($pageurl);
-
+        echo html_writer::input_hidden_params($this->baseurl);
         echo '<div class="categoryquestionscontainer">';
         $this->start_table();
         $rowcount = 0;
@@ -1636,7 +1673,13 @@ class question_bank_view {
             return true;
         }
     }
+
+    public function add_searchcondition($searchcondition) {
+        $this->searchconditions[] = $searchcondition;
+    }
+
 }
+
 
 /**
  * Common setup for all pages for editing questions.
@@ -1899,7 +1942,7 @@ function print_qtype_to_add_option($qtype) {
  * (by default the question bank screen).
  *
  * @param int $categoryid The id of the category that the new question should be added to.
- * @param array $params Other paramters to add to the URL. You need either $params['cmid'] or
+ * @param array $params Other parameters to add to the URL. You need either $params['cmid'] or
  *      $params['courseid'], and you should probably set $params['returnurl']
  * @param string $caption the text to display on the button.
  * @param string $tooltip a tooltip to add to the button (optional).
@@ -1920,4 +1963,184 @@ function create_new_question_button($categoryid, $params, $caption, $tooltip = '
     }
 }
 
+
+/**
+ * An abstract class for filtering/searching questions.
+ *
+ */
+abstract class question_bank_search_condition {
+    /**
+     * @return string An SQL fragment to be ANDed into the WHERE clause to filter which questions are shown
+     */
+    public abstract function where();
+
+    /**
+     * @return array Parameters to be bound to the above WHERE clause fragment
+     */
+    public function params() {
+        return array();
+    }
+
+    /**
+     * Display GUI for selecting criteria for this condition. Displayed when Show More is open.
+     * 
+     * Compare display_options(), which displays always, whether Show More is open or not.
+     * @return string HTML form fragment 
+     */
+    public function display_options_adv() {
+        return;
+    }
+
+    /**
+     * Display GUI for selecting criteria for this condition. Displayed always, whether Show More is open or not.
+     * 
+     * Compare display_options_adv(), which displays when Show More is open.
+     * @return string HTML form fragment 
+     */
+    public function display_options() {
+        return;
+    }
+}
+
+
+ /**
+  * Subclassed by components to add search conditions / filters to the question bank display,
+  * represented as question_bank_search_condition classes.
+  * Currently consists of the method question_bank_search_condition_array, which returns an array 
+  * of question_bank_search_condition class names (or subclasses thereof)
+  */
+abstract class question_bank_search_condition_array {
+     /**
+      * @return Returns an array of question_bank_search_condition class names (or subclasses thereof)
+      */
+    public static function get_conditions() {
+        return array();
+    }
+}
+
+
+/**
+ *  This class controls whether hidden / deleted questions are hidden in the list.
+ */
+class question_bank_search_condition_hide extends question_bank_search_condition {
+    protected $where  = '';
+    protected $hide;
+    public function __construct($hide = true) {
+        $this->hide = $hide;
+        if ($hide) {
+            $this->where = 'q.hidden = 0';
+        }
+    }
+
+    public function where() {
+        return  $this->where;
+    }
+
+    public function display_options_adv() {
+        echo html_writer::empty_tag('input', array('type' => 'hidden', 'name' => 'showhidden', 
+                                                   'value' => '0', 'id' => 'showhidden_off'));
+        echo html_writer::checkbox('showhidden', '1', (! $this->hide), get_string('showhidden', 'question'),
+                                   array('id' => 'showhidden_on', 'class' => 'searchoptions'));
+    }
+}
+
+
+/**
+ *  This class controls which category questions are listed from.
+ */
+class question_bank_search_condition_category extends question_bank_search_condition {
+    protected $category;
+    protected $recurse;
+    protected $where;
+    protected $params;
+    protected $cat;
+
+    public function __construct($cat = null, $recurse = false, $contexts, $baseurl, $course) {
+        $this->cat = $cat;
+        $this->recurse = $recurse;
+        $this->contexts = $contexts;
+        $this->baseurl = $baseurl;
+        $this->course = $course;
+        $this->init();
+    }
+
+    private function init() {
+        global $DB;
+        if (!$this->category = $this->get_current_category($this->cat)) {
+            return;
+        }
+        if ($this->recurse) {
+            $categoryids = question_categorylist($this->category->id);
+        } else {
+            $categoryids = array($this->category->id);
+        }
+        list($catidtest, $this->params) = $DB->get_in_or_equal($categoryids, SQL_PARAMS_NAMED, 'cat');
+        $this->where = 'q.category ' . $catidtest;
+    }
+
+    public function where() {
+        return  $this->where;
+    }
+
+    public function params() {
+        return $this->params;
+    }
+
+    public function display_options() {
+        $this->display_category_form($this->contexts, $this->baseurl, $this->cat);
+        $this->print_category_info($this->category);
+    }
+
+    public function display_options_adv() {
+        echo '<div>';
+        echo html_writer::empty_tag('input', array('type' => 'hidden', 'name' => 'recurse',
+                                               'value' => 0, 'id' => 'recurse_off'));
+        echo html_writer::checkbox('recurse', '1', $this->recurse, get_string('includesubcategories', 'question'),
+                                       array('id' => 'recurse_on', 'class' => 'searchoptions'));
+        echo "</div>\n";
+
+    }
+
+    protected function display_category_form($contexts, $pageurl, $current) {
+        global $OUTPUT;
+
+        echo '<div class="choosecategory">';
+        $catmenu = question_category_options($contexts, false, 0, true);
+        $select = new single_select($this->baseurl, 'category', $catmenu, $current, null, 'catmenu');
+        $select->set_label(get_string('selectacategory', 'question'));
+        $select->class= 'categorypicker';
+        echo $OUTPUT->render($select);
+        echo "</div>\n";
+
+    }
+
+    protected function get_current_category($categoryandcontext) {
+        global $DB, $OUTPUT;
+        list($categoryid, $contextid) = explode(',', $categoryandcontext);
+        if (!$categoryid) {
+            $this->print_choose_category_message($categoryandcontext);
+            return false;
+        }
+
+        if (!$category = $DB->get_record('question_categories',
+                array('id' => $categoryid, 'contextid' => $contextid))) {
+            echo $OUTPUT->box_start('generalbox questionbank');
+            echo $OUTPUT->notification('Category not found!');
+            echo $OUTPUT->box_end();
+            return false;
+        }
+
+        return $category;
+    }
+
+    protected function print_category_info($category) {
+        $formatoptions = new stdClass();
+        $formatoptions->noclean = true;
+        $formatoptions->overflowdiv = true;
+        echo '<div class="boxaligncenter">';
+        echo format_text($category->info, $category->infoformat, $formatoptions, $this->course->id);
+        echo "</div>\n";
+    }
+
+}
 
