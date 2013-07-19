@@ -2327,7 +2327,7 @@ class accesslib_testcase extends advanced_testcase {
                 $this->assertEquals(context_inspection::test_context_cache_size(), CONTEXT_CACHE_MAX_SIZE);
             } else if ($i == CONTEXT_CACHE_MAX_SIZE) {
                 // once the limit is reached roughly 1/3 of records should be removed from cache
-                $this->assertEquals(context_inspection::test_context_cache_size(), (int)(CONTEXT_CACHE_MAX_SIZE * (2/3) +102));
+                $this->assertEquals(context_inspection::test_context_cache_size(), (int)ceil(CONTEXT_CACHE_MAX_SIZE * (2/3) + 101));
             }
         }
         // We keep the first 100 cached
@@ -2428,6 +2428,9 @@ class accesslib_testcase extends advanced_testcase {
 
         context_helper::reset_caches();
         list($select, $join) = context_instance_preload_sql('c.id', CONTEXT_COURSECAT, 'ctx');
+        $this->assertDebuggingCalled('context_instance_preload_sql() is deprecated, please use context_helper::get_preload_record_columns_sql() instead.', DEBUG_DEVELOPER);
+        $this->assertEquals(', ' . context_helper::get_preload_record_columns_sql('ctx'), $select);
+        $this->assertEquals('LEFT JOIN {context} ctx ON (ctx.instanceid = c.id AND ctx.contextlevel = ' . CONTEXT_COURSECAT . ')', $join);
         $sql = "SELECT c.id $select FROM {course_categories} c $join";
         $records = $DB->get_records_sql($sql);
         foreach ($records as $record) {
@@ -2442,6 +2445,7 @@ class accesslib_testcase extends advanced_testcase {
         accesslib_clear_all_caches(true);
         $DB->delete_records('cache_flags', array());
         mark_context_dirty($systemcontext->path);
+        $this->assertDebuggingCalled('mark_context_dirty() is deprecated, please use $context->mark_dirty() instead.', DEBUG_DEVELOPER);
         $dirty = get_cache_flags('accesslib/dirtycontexts', time()-2);
         $this->assertTrue(isset($dirty[$systemcontext->path]));
 
@@ -2461,7 +2465,10 @@ class accesslib_testcase extends advanced_testcase {
 
         $this->assertTrue($DB->record_exists('context', array('contextlevel'=>CONTEXT_COURSE, 'instanceid'=>$testcourses[2])));
         delete_context(CONTEXT_COURSE, $testcourses[2]);
+        $this->assertDebuggingCalled('delete_context() is deprecated, please use context_helper::delete_instance() instead.', DEBUG_DEVELOPER);
         $this->assertFalse($DB->record_exists('context', array('contextlevel'=>CONTEXT_COURSE, 'instanceid'=>$testcourses[2])));
+        delete_context(CONTEXT_COURSE, $testcourses[2], false);
+        $this->assertDebuggingCalled('delete_context() is deprecated, please use $context->delete_content() instead.', DEBUG_DEVELOPER);
 
         $name = get_contextlevel_name(CONTEXT_COURSE);
         $this->assertDebuggingCalled('get_contextlevel_name() is deprecated, please use context_helper::get_level_name() instead.', DEBUG_DEVELOPER);
@@ -2472,17 +2479,25 @@ class accesslib_testcase extends advanced_testcase {
         $this->assertDebuggingCalled('print_context_name() is deprecated, please use $context->get_context_name() instead.', DEBUG_DEVELOPER);
         $this->assertFalse(empty($name));
 
-        $url = get_context_url($coursecontext);
-        $this->assertFalse($url instanceof modole_url);
+        $url1 = get_context_url($coursecontext);
+        $this->assertDebuggingCalled('get_context_url() is deprecated, please use $context->get_url() instead.', DEBUG_DEVELOPER);
+        $url2 = $coursecontext->get_url();
+        $this->assertEquals($url1, $url2);
+        $this->assertFalse($url2 instanceof modole_url);
 
         $pagecm = get_coursemodule_from_instance('page', $testpages[7]);
         $context = context_module::instance($pagecm->id);
-        $coursecontext = get_course_context($context);
-        $this->assertEquals($coursecontext->contextlevel, CONTEXT_COURSE);
+        $coursecontext1 = get_course_context($context);
+        $this->assertDebuggingCalled('get_course_context() is deprecated, please use $context->get_course_context(true) instead.', DEBUG_DEVELOPER);
+        $coursecontext2 = $context->get_course_context(true);
+        $this->assertEquals($coursecontext1, $coursecontext2);
+        $this->assertEquals($coursecontext2->contextlevel, CONTEXT_COURSE);
         $this->assertEquals(get_courseid_from_context($context), $pagecm->course);
+        $this->assertDebuggingCalled('get_courseid_from_context() is deprecated, please use $context->get_course_context(false) instead.', DEBUG_DEVELOPER);
 
         $caps = fetch_context_capabilities($systemcontext);
-        $this->assertTrue(is_array($caps));
+        $this->assertDebuggingCalled('fetch_context_capabilities() is deprecated, please use $context->get_capabilities() instead.', DEBUG_DEVELOPER);
+        $this->assertEquals($systemcontext->get_capabilities(), $caps);
         unset($caps);
     }
 

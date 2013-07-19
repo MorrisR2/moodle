@@ -2387,7 +2387,7 @@ function count_enrolled_users(context $context, $withcapability = '', $groupid =
  * @return array array of capabilities
  */
 function load_capability_def($component) {
-    $defpath = get_component_directory($component).'/db/access.php';
+    $defpath = core_component::get_component_directory($component).'/db/access.php';
 
     $capabilities = array();
     if (file_exists($defpath)) {
@@ -2667,6 +2667,7 @@ function update_capabilities($component = 'moodle') {
 /**
  * Deletes cached capabilities that are no longer needed by the component.
  * Also unassigns these capabilities from any roles that have them.
+ * NOTE: this function is called from lib/db/upgrade.php
  *
  * @access private
  * @param string $component examples: 'moodle', 'mod_forum', 'block_quiz_results'
@@ -2862,7 +2863,7 @@ function get_capability_string($capabilityname) {
         return get_string($stringname, $component);
     }
 
-    $dir = get_component_directory($component);
+    $dir = core_component::get_component_directory($component);
     if (!file_exists($dir)) {
         // plugin broken or does not exist, do not bother with printing of debug message
         return $capabilityname.' ???';
@@ -2894,8 +2895,8 @@ function get_component_string($component, $contextlevel) {
         }
     }
 
-    list($type, $name) = normalize_component($component);
-    $dir = get_plugin_directory($type, $name);
+    list($type, $name) = core_component::normalize_component($component);
+    $dir = core_component::get_plugin_directory($type, $name);
     if (!file_exists($dir)) {
         // plugin not installed, bad luck, there is no way to find the name
         return $component.' ???';
@@ -6862,7 +6863,7 @@ class context_module extends context {
             include($subpluginsfile);
             if (!empty($subplugins)) {
                 foreach (array_keys($subplugins) as $subplugintype) {
-                    foreach (array_keys(get_plugin_list($subplugintype)) as $subpluginname) {
+                    foreach (array_keys(core_component::get_plugin_list($subplugintype)) as $subpluginname) {
                         $subcaps = array_merge($subcaps, array_keys(load_capability_def($subplugintype.'_'.$subpluginname)));
                     }
                 }
@@ -7230,164 +7231,6 @@ class context_block extends context {
 // before removing devs will be warned with a debugging message first,
 // then we will add error message and only after that we can remove the functions
 // completely.
-/**
- * Preloads context information together with instances.
- * Use context_helper::preload_from_record() to strip the context info from the record and cache the context instance.
- *
- * @deprecated since 2.2
- * @param string $joinon for example 'u.id'
- * @param string $contextlevel context level of instance in $joinon
- * @param string $tablealias context table alias
- * @return array with two values - select and join part
- */
-function context_instance_preload_sql($joinon, $contextlevel, $tablealias) {
-    $select = ", ".context_helper::get_preload_record_columns_sql($tablealias);
-    $join = "LEFT JOIN {context} $tablealias ON ($tablealias.instanceid = $joinon AND $tablealias.contextlevel = $contextlevel)";
-    return array($select, $join);
-}
-
-/**
- * Mark a context as dirty (with timestamp) so as to force reloading of the context.
- *
- * @deprecated since 2.2, use $context->mark_dirty() instead
- * @param string $path context path
- */
-function mark_context_dirty($path) {
-    global $CFG, $USER, $ACCESSLIB_PRIVATE;
-
-    if (during_initial_install()) {
-        return;
-    }
-
-    // only if it is a non-empty string
-    if (is_string($path) && $path !== '') {
-        set_cache_flag('accesslib/dirtycontexts', $path, 1, time()+$CFG->sessiontimeout);
-        if (isset($ACCESSLIB_PRIVATE->dirtycontexts)) {
-            $ACCESSLIB_PRIVATE->dirtycontexts[$path] = 1;
-        } else {
-            if (CLI_SCRIPT) {
-                $ACCESSLIB_PRIVATE->dirtycontexts = array($path => 1);
-            } else {
-                if (isset($USER->access['time'])) {
-                    $ACCESSLIB_PRIVATE->dirtycontexts = get_cache_flags('accesslib/dirtycontexts', $USER->access['time']-2);
-                } else {
-                    $ACCESSLIB_PRIVATE->dirtycontexts = array($path => 1);
-                }
-                // flags not loaded yet, it will be done later in $context->reload_if_dirty()
-            }
-        }
-    }
-}
-
-/**
- * Remove a context record and any dependent entries,
- * removes context from static context cache too
- *
- * @deprecated since 2.2, use $context->delete_content() instead
- * @param int $contextlevel
- * @param int $instanceid
- * @param bool $deleterecord false means keep record for now
- * @return bool returns true or throws an exception
- */
-function delete_context($contextlevel, $instanceid, $deleterecord = true) {
-    if ($deleterecord) {
-        context_helper::delete_instance($contextlevel, $instanceid);
-    } else {
-        $classname = context_helper::get_class_for_level($contextlevel);
-        if ($context = $classname::instance($instanceid, IGNORE_MISSING)) {
-            $context->delete_content();
-        }
-    }
-
-    return true;
-}
-
-/**
- * Get a URL for a context, if there is a natural one. For example, for
- * CONTEXT_COURSE, this is the course page. For CONTEXT_USER it is the
- * user profile page.
- *
- * @deprecated since 2.2
- * @param context $context the context.
- * @return moodle_url
- */
-function get_context_url(context $context) {
-    return $context->get_url();
-}
-
-/**
- * Is this context part of any course? if yes return course context,
- * if not return null or throw exception.
- *
- * @deprecated since 2.2, use $context->get_course_context() instead
- * @param context $context
- * @return course_context context of the enclosing course, null if not found or exception
- */
-function get_course_context(context $context) {
-    return $context->get_course_context(true);
-}
-
-/**
- * Returns current course id or null if outside of course based on context parameter.
- *
- * @deprecated since 2.2, use  $context->get_course_context instead
- * @param context $context
- * @return int|bool related course id or false
- */
-function get_courseid_from_context(context $context) {
-    if ($coursecontext = $context->get_course_context(false)) {
-        return $coursecontext->instanceid;
-    } else {
-        return false;
-    }
-}
-
-/**
- * Get an array of courses where cap requested is available
- * and user is enrolled, this can be relatively slow.
- *
- * @deprecated since 2.2, use enrol_get_users_courses() instead
- * @param int    $userid A user id. By default (null) checks the permissions of the current user.
- * @param string $cap - name of the capability
- * @param array  $accessdata_ignored
- * @param bool   $doanything_ignored
- * @param string $sort - sorting fields - prefix each fieldname with "c."
- * @param array  $fields - additional fields you are interested in...
- * @param int    $limit_ignored
- * @return array $courses - ordered array of course objects - see notes above
- */
-function get_user_courses_bycap($userid, $cap, $accessdata_ignored, $doanything_ignored, $sort = 'c.sortorder ASC', $fields = null, $limit_ignored = 0) {
-
-    $courses = enrol_get_users_courses($userid, true, $fields, $sort);
-    foreach ($courses as $id=>$course) {
-        $context = context_course::instance($id);
-        if (!has_capability($cap, $context, $userid)) {
-            unset($courses[$id]);
-        }
-    }
-
-    return $courses;
-}
-
-/**
- * Extracts the relevant capabilities given a contextid.
- * All case based, example an instance of forum context.
- * Will fetch all forum related capabilities, while course contexts
- * Will fetch all capabilities
- *
- * capabilities
- * `name` varchar(150) NOT NULL,
- * `captype` varchar(50) NOT NULL,
- * `contextlevel` int(10) NOT NULL,
- * `component` varchar(100) NOT NULL,
- *
- * @deprecated since 2.2
- * @param context $context
- * @return array
- */
-function fetch_context_capabilities(context $context) {
-    return $context->get_capabilities();
-}
 
 /**
  * Runs get_records select on context table and returns the result
@@ -7419,50 +7262,6 @@ function get_sorted_contexts($select, $params = array()) {
            $select
           ORDER BY ctx.contextlevel, bi.defaultregion, COALESCE(cat.sortorder, c.sortorder, cm.section, bi.defaultweight), u.lastname, u.firstname, cm.id
             ", $params);
-}
-
-/**
- * This is really slow!!! do not use above course context level
- *
- * @deprecated since 2.2
- * @param int $roleid
- * @param context $context
- * @return array
- */
-function get_role_context_caps($roleid, context $context) {
-    global $DB;
-
-    //this is really slow!!!! - do not use above course context level!
-    $result = array();
-    $result[$context->id] = array();
-
-    // first emulate the parent context capabilities merging into context
-    $searchcontexts = array_reverse($context->get_parent_context_ids(true));
-    foreach ($searchcontexts as $cid) {
-        if ($capabilities = $DB->get_records('role_capabilities', array('roleid'=>$roleid, 'contextid'=>$cid))) {
-            foreach ($capabilities as $cap) {
-                if (!array_key_exists($cap->capability, $result[$context->id])) {
-                    $result[$context->id][$cap->capability] = 0;
-                }
-                $result[$context->id][$cap->capability] += $cap->permission;
-            }
-        }
-    }
-
-    // now go through the contexts below given context
-    $searchcontexts = array_keys($context->get_child_contexts());
-    foreach ($searchcontexts as $cid) {
-        if ($capabilities = $DB->get_records('role_capabilities', array('roleid'=>$roleid, 'contextid'=>$cid))) {
-            foreach ($capabilities as $cap) {
-                if (!array_key_exists($cap->contextid, $result)) {
-                    $result[$cap->contextid] = array();
-                }
-                $result[$cap->contextid][$cap->capability] = $cap->permission;
-            }
-        }
-    }
-
-    return $result;
 }
 
 /**

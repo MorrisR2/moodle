@@ -198,7 +198,7 @@ abstract class editor_tinymce_plugin {
      * @param int $row Row to add button to (1 to 10)
      * @param string $button Identifier of button/plugin
      * @param string $before Adds button directly before the named plugin
-     * @param bool $alwaysadd If specified $after string not found, add at start
+     * @param bool $alwaysadd If specified $before string not found, add at start
      * @return bool True if added
      */
     protected function add_button_before(array &$params, $row, $button,
@@ -218,7 +218,7 @@ abstract class editor_tinymce_plugin {
             return true;
         }
 
-        // Try to add after given plugin.
+        // Try to add before given plugin.
         $params[$field] = preg_replace('~(,|^)(' . preg_quote($before) . ')(,|$)~',
                 '$1' . $button . ',$2$3', $old);
         if ($params[$field] !== $old) {
@@ -270,8 +270,9 @@ abstract class editor_tinymce_plugin {
             return $row;
         }
         for($i=$row; $i>=1; $i--) {
+            $field = 'theme_advanced_buttons' . $i;
             if (isset($params[$field])) {
-                return $row;
+                return $i;
             }
         }
         // This should not happen.
@@ -377,7 +378,7 @@ abstract class editor_tinymce_plugin {
         global $CFG;
 
         // Get list of plugin directories.
-        $plugins = get_plugin_list('tinymce');
+        $plugins = core_component::get_plugin_list('tinymce');
 
         // Get list of disabled subplugins.
         $disabled = array();
@@ -417,7 +418,7 @@ abstract class editor_tinymce_plugin {
      * @return editor_tinymce_plugin Plugin object
      */
     public static function get($plugin) {
-        $dir = get_component_directory('tinymce_' . $plugin);
+        $dir = core_component::get_component_directory('tinymce_' . $plugin);
         require_once($dir . '/lib.php');
         $classname = 'tinymce_' . $plugin;
         return new $classname($plugin);

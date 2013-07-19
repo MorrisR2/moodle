@@ -1468,6 +1468,7 @@ function unset_config($name, $plugin=NULL) {
 
 /**
  * Remove all the config variables for a given plugin.
+ * NOTE: this function is called from lib/db/upgrade.php
  *
  * @param string $plugin a plugin, for example 'quiz' or 'qtype_multichoice';
  * @return boolean whether the operation succeeded.
@@ -4191,7 +4192,7 @@ function delete_user(stdClass $user) {
     session_kill_user($user->id);
 
     // now do a final accesslib cleanup - removes all role assignments in user context and context itself
-    delete_context(CONTEXT_USER, $user->id);
+    context_helper::delete_instance(CONTEXT_USER, $user->id);
 
     // workaround for bulk deletes of users with the same email address
     $delname = "$user->email.".time();
@@ -4837,7 +4838,7 @@ function delete_course($courseorid, $showfeedback = true) {
     remove_course_contents($courseid, $showfeedback);
 
     // delete the course and related context instance
-    delete_context(CONTEXT_COURSE, $courseid);
+    context_helper::delete_instance(CONTEXT_COURSE, $courseid);
 
     // We will update the course's timemodified, as it will be passed to the course_deleted event,
     // which should know about this updated property, as this event is meant to pass the full course record
@@ -5236,7 +5237,7 @@ function reset_course_userdata($data) {
         }
         $DB->delete_records('role_capabilities', array('contextid'=>$context->id));
         //force refresh for logged in users
-        mark_context_dirty($context->path);
+        $context->mark_dirty();
         $status[] = array('component'=>$componentstr, 'item'=>get_string('deletecourseoverrides', 'role'), 'error'=>false);
     }
 
@@ -5246,7 +5247,7 @@ function reset_course_userdata($data) {
             role_unassign_all(array('contextid'=>$child->id));
         }
         //force refresh for logged in users
-        mark_context_dirty($context->path);
+        $context->mark_dirty();
         $status[] = array('component'=>$componentstr, 'item'=>get_string('deletelocalroles', 'role'), 'error'=>false);
     }
 
@@ -8214,7 +8215,7 @@ function get_plugin_list_with_function($plugintype, $function, $file = 'lib.php'
  * Lists plugin-like directories within specified directory
  *
  * This function was originally used for standard Moodle plugins, please use
- * new get_plugin_list() now.
+ * new core_component::get_plugin_list() now.
  *
  * This function is used for general directory listing and backwards compatility.
  *
