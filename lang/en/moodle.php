@@ -115,6 +115,7 @@ $string['administratorsandteachers'] = 'Administrators and teachers';
 $string['advanced'] = 'Advanced';
 $string['advancedfilter'] = 'Advanced search';
 $string['advancedsettings'] = 'Advanced settings';
+$string['aftercontent'] = 'After {$a}';
 $string['again'] = 'again';
 $string['aimid'] = 'AIM ID';
 $string['ajaxuse'] = 'AJAX and Javascript';
