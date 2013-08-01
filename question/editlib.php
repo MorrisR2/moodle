@@ -1403,17 +1403,15 @@ class question_bank_view {
     }
 
     /**
-     * Generate the "advanced" UI elements for the form to select which questions. Hidden by default.
+     * Print the "advanced" UI elements for the form to select which questions. Hidden by default.
      */
     protected function display_advanced_search_form() {
-        global $PAGE;
-
-        echo "<div id=\"advancedsearch\">\n";
+        print_collapsible_region_start('', 'advancedsearch', get_string('advancedsearchoptions', 'question'), 
+                                               'question_bank_advanced_search');
         foreach ($this->searchconditions as $searchcondition) {
             echo $searchcondition->display_options_adv($this);
         }
-        echo "</div>\n";
-        echo '<a href="#" class="moreless-toggler" id="showhideadvsearch">' . get_string('showmore', 'form') . "</a>\n";
+        print_collapsible_region_end();
     }
 
     protected function create_new_question_form($category, $canadd) {

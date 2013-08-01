@@ -1,4 +1,3 @@
-YUI.add('moodle-question-searchform', function(Y, NAME) {
 
     var SELECTORS = {
             OPTIONS: '.searchoptions'
@@ -9,18 +8,6 @@ YUI.add('moodle-question-searchform', function(Y, NAME) {
     NS = M.question.searchform = {};
 
     NS.init = function(args) {
-
-        NS.showmore = args.showmore;
-        NS.showless = args.showless;
-        NS.advsearch = Y.one('#advancedsearch');
-
-        NS.chkshowhideadvsearch = Y.one('#showhideadvsearch');
-        NS.chkshowhideadvsearch.on('click', this.advancedsearch_click);
-        if (! args.showadv) {
-            NS.advsearch.hide();
-        } else {
-            NS.chkshowhideadvsearch.setHTML(NS.showless);
-        }
         Y.delegate('change', this.option_changed, Y.config.doc, SELECTORS.OPTIONS, this);
     };
 
@@ -28,15 +15,3 @@ YUI.add('moodle-question-searchform', function(Y, NAME) {
             e.target.getDOMNode().form.submit();
     };
 
-    NS.advancedsearch_click = function(e) {
-        NS.advsearch.toggleView();
-        if (NS.advsearch.getAttribute('hidden') || NS.advsearch.getStyle('display') == 'none') {
-            NS.chkshowhideadvsearch.setHTML(NS.showmore);
-            Y.one('#showadv').set('value', 0);
-        } else {
-            NS.chkshowhideadvsearch.setHTML(NS.showless);
-            Y.one('#showadv').set('value', 1);
-        }
-    };
-
-}, '@VERSION@', {"requires": ["base", "node"]});
