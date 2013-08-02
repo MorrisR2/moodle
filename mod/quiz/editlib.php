@@ -1189,11 +1189,14 @@ class quiz_question_bank_view extends question_bank_view {
         }
 
         $editcontexts = $this->contexts->having_one_edit_tab_cap($tabname);
-        array_unshift($this->searchconditions, new question_bank_search_condition_hide(!$showhidden));
-        array_unshift($this->searchconditions, new question_bank_search_condition_category($cat, $recurse, $editcontexts,
-                                                                                           $this->baseurl, $this->course));
-        $this->display_options($recurse, $showhidden, $showquestiontext);
+        array_unshift($this->searchconditions,
+                new question_bank_search_condition_hide(!$showhidden));
+        array_unshift($this->searchconditions,
+                new question_bank_search_condition_category($cat, $recurse,
+                        $editcontexts, $this->baseurl, $this->course));
+
         echo $OUTPUT->box_start('generalbox questionbank');
+        $this->display_options_form($showquestiontext);
 
         // Continues with list of questions.
         $this->display_question_list($this->contexts->having_one_edit_tab_cap($tabname),
@@ -1216,14 +1219,6 @@ class quiz_question_bank_view extends question_bank_view {
     }
 
     /**
-     * @deprecated Replaced by display_options_form.
-     * $recurse and $showhidden replaced by class question_bank_search_condition_category.
-     */
-    protected function display_options($recurse, $showhidden, $showquestiontext) {
-        return $this->display_options_form($showquestiontext);
-    }
-
-    /**
      * Display the form with options for which questions are displayed and how they are displayed.
      * This differs from parent display_options_form only in that it does not have the checkbox to show the question text.
      * @param bool $showquestiontext Display the text of the question within the list. (Currently ignored)
@@ -1231,22 +1226,23 @@ class quiz_question_bank_view extends question_bank_view {
     protected function display_options_form($showquestiontext) {
         global $PAGE;
 
-        $showadv = optional_param('showadv', false, PARAM_BOOL);
-        echo '<form method="get" action="edit.php" id="displayoptions">';
-        echo "<fieldset class='invisiblefieldset'>";
-        echo html_writer::empty_tag('input', array('type' => 'hidden', 'name' => 'showadv',
-                                                   'value' => $showadv, 'id' => 'showadv'));
-        echo html_writer::input_hidden_params($this->baseurl, array('recurse', 'showhidden', 'qbshowtext'));
+        echo html_writer::start_tag('form', array('method' => 'get',
+                'action' => new moodle_url('/mod/quiz/edit.php'), 'id' => 'displayoptions'));
+        echo html_writer::start_div();
 
         foreach ($this->searchconditions as $searchcondition) {
             echo $searchcondition->display_options($this);
         }
+
         $this->display_advanced_search_form();
-        $options = array('showmore'=>get_string('showmore', 'form'), 'showless'=>get_string('showless', 'form'),
-                         'showadv'=>$showadv);
-        $PAGE->requires->yui_module('moodle-question-searchform', 'M.question.searchform.init', array($options));
-        echo '<noscript><div class="centerpara"><input type="submit" value="'. get_string('go') .'" />';
-        echo '</div></noscript></fieldset></form>';
+
+        $go = html_writer::empty_tag('input', array('type'=>'submit', 'value'=>get_string('go')));
+        echo html_writer::tag('noscript', html_writer::tag('div', $go), array('class' => 'inline'));
+
+        echo html_writer::end_div();
+        echo html_writer::end_tag('form');
+
+        $PAGE->requires->yui_module('moodle-question-searchform', 'M.question.searchform.init');
     }
 }
 
