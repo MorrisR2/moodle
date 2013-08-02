@@ -9,7 +9,7 @@ YUI.add('moodle-question-searchform', function (Y, NAME) {
     M.question = M.question || {};
     NS = M.question.searchform = {};
 
-    NS.init = function(args) {
+    NS.init = function() {
         Y.delegate('change', this.option_changed, Y.config.doc, SELECTORS.OPTIONS, this);
     };
 

@@ -1355,11 +1355,8 @@ class question_bank_view {
     protected function display_options_form($showquestiontext) {
         global $PAGE;
 
-        $showadv = optional_param('showadv', false, PARAM_BOOL);
         echo '<form method="get" action="edit.php" id="displayoptions">';
         echo "<fieldset class='invisiblefieldset'>";
-        echo html_writer::empty_tag('input', array('type' => 'hidden', 'name' => 'showadv',
-                                                   'value' => $showadv, 'id' => 'showadv'));
         echo html_writer::input_hidden_params($this->baseurl, array('recurse', 'showhidden', 'qbshowtext'));
 
         foreach ($this->searchconditions as $searchcondition) {
@@ -1367,9 +1364,7 @@ class question_bank_view {
         }
         $this->display_showtext_checkbox($showquestiontext);
         $this->display_advanced_search_form();
-        $options = array('showmore'=>get_string('showmore', 'form'), 'showless'=>get_string('showless', 'form'),
-                         'showadv'=>$showadv);
-        $PAGE->requires->yui_module('moodle-question-searchform', 'M.question.searchform.init', array($options));
+        $PAGE->requires->yui_module('moodle-question-searchform', 'M.question.searchform.init');
         echo '<noscript><div class="centerpara"><input type="submit" value="'. get_string('go') .'" />';
         echo '</div></noscript></fieldset></form>';
     }
@@ -2194,7 +2189,7 @@ class question_bank_search_condition_category extends question_bank_search_condi
         $formatoptions = new stdClass();
         $formatoptions->noclean = true;
         $formatoptions->overflowdiv = true;
-        echo '<div class="boxaligncenter">';
+        echo '<div class="boxaligncenter categoryinfo">';
         echo format_text($category->info, $category->infoformat, $formatoptions, $this->course->id);
         echo "</div>\n";
     }
