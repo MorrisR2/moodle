@@ -1115,6 +1115,7 @@ class quiz_question_bank_view extends question_bank_view {
     protected $quizhasattempts = false;
     /** @var object the quiz settings. */
     protected $quiz = false;
+    const MAX_TEXT_LENGTH = 200;
 
     /**
      * Constructor
@@ -1193,7 +1194,7 @@ class quiz_question_bank_view extends question_bank_view {
                 new question_bank_search_condition_hide(!$showhidden));
         array_unshift($this->searchconditions,
                 new question_bank_search_condition_category($cat, $recurse,
-                        $editcontexts, $this->baseurl, $this->course));
+                        $editcontexts, $this->baseurl, $this->course, self::MAX_TEXT_LENGTH));
 
         echo $OUTPUT->box_start('generalbox questionbank');
         $this->display_options_form($showquestiontext);

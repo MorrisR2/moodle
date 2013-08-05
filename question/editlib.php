@@ -2075,19 +2075,21 @@ class question_bank_search_condition_category extends question_bank_search_condi
 
     /**
      * Constructor
-     * @param string     $cat      categoryID,contextID as used with question_bank_view->display()
-     * @param boolean    $recurse  Whether to include questions from sub-categories
-     * @param array      $contexts Context objects as used by question_category_options()
-     * @param moodle_url $baseurl  the URL the form is submitted to
-     * @param stdClass   $course   course record
+     * @param string     $cat           categoryID,contextID as used with question_bank_view->display()
+     * @param boolean    $recurse       Whether to include questions from sub-categories
+     * @param array      $contexts      Context objects as used by question_category_options()
+     * @param moodle_url $baseurl       The URL the form is submitted to
+     * @param stdClass   $course        Course record
+     * @param integer    $maxinfolength The maximum displayed length of the category info
      */
-    public function __construct($cat = null, $recurse = false, $contexts, $baseurl, $course) {
+    public function __construct($cat = null, $recurse = false, $contexts, $baseurl, $course, $maxinfolength = null) {
         $this->cat = $cat;
         $this->recurse = $recurse;
         $this->contexts = $contexts;
         $this->baseurl = $baseurl;
         $this->course = $course;
         $this->init();
+        $this->maxinfolength = $maxinfolength;
     }
 
     /**
@@ -2190,7 +2192,8 @@ class question_bank_search_condition_category extends question_bank_search_condi
         $formatoptions->noclean = true;
         $formatoptions->overflowdiv = true;
         echo '<div class="boxaligncenter categoryinfo">';
-        echo format_text($category->info, $category->infoformat, $formatoptions, $this->course->id);
+        echo shorten_text(strip_tags(format_text($category->info, $category->infoformat, $formatoptions, $this->course->id)),
+                                 $this->maxinfolength);
         echo "</div>\n";
     }
 
