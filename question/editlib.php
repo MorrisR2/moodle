@@ -2192,8 +2192,12 @@ class question_bank_search_condition_category extends question_bank_search_condi
         $formatoptions->noclean = true;
         $formatoptions->overflowdiv = true;
         echo '<div class="boxaligncenter categoryinfo">';
-        echo shorten_text(strip_tags(format_text($category->info, $category->infoformat, $formatoptions, $this->course->id)),
-                                 $this->maxinfolength);
+        if (isset($this->maxinfolength)) {
+            echo shorten_text(format_text($category->info, $category->infoformat, $formatoptions, $this->course->id),
+                                     $this->maxinfolength);
+        } else {
+            echo format_text($category->info, $category->infoformat, $formatoptions, $this->course->id);
+        }
         echo "</div>\n";
     }
 

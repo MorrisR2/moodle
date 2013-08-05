@@ -25,7 +25,7 @@
 $string['addmorechoiceblanks'] = 'Blanks for {no} more choices';
 $string['addcategory'] = 'Add category';
 $string['adminreport'] = 'Report on possible problems in your question database.';
-$string['advancedsearchoptions'] = 'Advanced options';
+$string['advancedsearchoptions'] = 'Search options';
 $string['answers'] = 'Answers';
 $string['availableq'] = 'Available?';
 $string['badbase'] = 'Bad base before **: {$a}**';
