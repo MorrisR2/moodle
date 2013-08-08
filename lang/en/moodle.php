@@ -664,6 +664,7 @@ $string['eventcoursecategorydeleted'] = 'Category deleted';
 $string['eventcoursecontentdeleted'] = 'Course content deleted';
 $string['eventcoursecreated'] = 'Course created';
 $string['eventcoursedeleted'] = 'Course deleted';
+$string['eventcourserestored'] = 'Course restored';
 $string['eventcourseupdated'] = 'Course updated';
 $string['everybody'] = 'Everybody';
 $string['executeat'] = 'Execute at';
