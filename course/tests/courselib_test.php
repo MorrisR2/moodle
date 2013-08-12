@@ -677,18 +677,6 @@ class core_course_courselib_testcase extends advanced_testcase {
         $created = create_course($course);
         // Ensure the checks only work on idnumber/shortname that are not already ours.
         update_course($created);
-        $original = (array) $course;
-
-        $created = create_course($course);
-        // Ensure the checks only work on idnumber/shortname that are not already ours.
-        $created = update_course($created);
->>>>>>> 5536a56... MDL-41417 course: prevent duplicate idnumbers being used when updating a course
-=======
-
-        $created = create_course($course);
-        // Ensure the checks only work on idnumber/shortname that are not already ours.
-        update_course($created);
->>>>>>> c3bf618... MDL-41417 course: allow the use of duplicated idnumbers if they existed before fix
 
         $course->shortname = 'test2';
         $course->idnumber = '2';
