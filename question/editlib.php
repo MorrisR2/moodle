@@ -792,7 +792,7 @@ class question_bank_delete_action_column extends question_bank_action_column_bas
                 $url = new moodle_url($this->qbank->base_url(), array('unhide' => $question->id, 'sesskey'=>sesskey()));
                 $this->print_icon('t/restore', $this->strrestore, $url);
             } else {
-                $url = new moodle_url($this->qbank->base_url(), 
+                $url = new moodle_url($this->qbank->base_url(),
                                       array('deleteselected' => $question->id, 'q' . $question->id => 1, 'sesskey'=>sesskey()));
                 $this->print_icon('t/delete', $this->strdelete, $url);
             }
@@ -1401,7 +1401,7 @@ class question_bank_view {
      * Print the "advanced" UI elements for the form to select which questions. Hidden by default.
      */
     protected function display_advanced_search_form() {
-        print_collapsible_region_start('', 'advancedsearch', get_string('advancedsearchoptions', 'question'), 
+        print_collapsible_region_start('', 'advancedsearch', get_string('advancedsearchoptions', 'question'),
                                                'question_bank_advanced_search');
         foreach ($this->searchconditions as $searchcondition) {
             echo $searchcondition->display_options_adv($this);
@@ -2000,9 +2000,9 @@ abstract class question_bank_search_condition {
 
     /**
      * Display GUI for selecting criteria for this condition. Displayed when Show More is open.
-     * 
+     *
      * Compare display_options(), which displays always, whether Show More is open or not.
-     * @return string HTML form fragment 
+     * @return string HTML form fragment
      */
     public function display_options_adv() {
         return;
@@ -2010,9 +2010,9 @@ abstract class question_bank_search_condition {
 
     /**
      * Display GUI for selecting criteria for this condition. Displayed always, whether Show More is open or not.
-     * 
+     *
      * Compare display_options_adv(), which displays when Show More is open.
-     * @return string HTML form fragment 
+     * @return string HTML form fragment
      */
     public function display_options() {
         return;
@@ -2028,7 +2028,7 @@ class question_bank_search_condition_hide extends question_bank_search_condition
     protected $hide;
 
     /**
-     * @param bool $hide include old "deleted" questions. 
+     * @param bool $hide include old "deleted" questions.
      */
     public function __construct($hide = true) {
         $this->hide = $hide;
@@ -2132,7 +2132,7 @@ class question_bank_search_condition_category extends question_bank_search_condi
     }
 
     /**
-     * Displays the recursion checkbox GUI. 
+     * Displays the recursion checkbox GUI.
      * question_bank_view places this within the section that is hidden by default
      */
     public function display_options_adv() {
@@ -2202,4 +2202,3 @@ class question_bank_search_condition_category extends question_bank_search_condi
     }
 
 }
-
