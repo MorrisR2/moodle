@@ -792,7 +792,7 @@ class question_bank_delete_action_column extends question_bank_action_column_bas
                 $url = new moodle_url($this->qbank->base_url(), array('unhide' => $question->id, 'sesskey'=>sesskey()));
                 $this->print_icon('t/restore', $this->strrestore, $url);
             } else {
-                $url = new moodle_url($this->qbank->base_url(), 
+                $url = new moodle_url($this->qbank->base_url(),
                                       array('deleteselected' => $question->id, 'q' . $question->id => 1, 'sesskey'=>sesskey()));
                 $this->print_icon('t/delete', $this->strdelete, $url);
             }
@@ -1401,7 +1401,7 @@ class question_bank_view {
      * Print the "advanced" UI elements for the form to select which questions. Hidden by default.
      */
     protected function display_advanced_search_form() {
-        print_collapsible_region_start('', 'advancedsearch', get_string('advancedsearchoptions', 'question'), 
+        print_collapsible_region_start('', 'advancedsearch', get_string('advancedsearchoptions', 'question'),
                                                'question_bank_advanced_search');
         foreach ($this->searchconditions as $searchcondition) {
             echo $searchcondition->display_options_adv($this);
@@ -1422,17 +1422,17 @@ class question_bank_view {
     }
 
     /**
-    * Prints the table of questions in a category with interactions
-    *
-    * @param object $course   The course object
-    * @param int $categoryid  The id of the question category to be displayed
-    * @param int $cm      The course module record if we are in the context of a particular module, 0 otherwise
-    * @param int $recurse     This is 1 if subcategories should be included, 0 otherwise
-    * @param int $page        The number of the page to be displayed
-    * @param int $perpage     Number of questions to show per page
-    * @param bool $showhidden   True if also hidden questions should be displayed. Deprecated.
-    * @param bool $showquestiontext whether the text of each question should be shown in the list. Deprecated.
-    */
+     * Prints the table of questions in a category with interactions
+     *
+     * @param object $course   The course object
+     * @param int $categoryid  The id of the question category to be displayed
+     * @param int $cm      The course module record if we are in the context of a particular module, 0 otherwise
+     * @param int $recurse     This is 1 if subcategories should be included, 0 otherwise
+     * @param int $page        The number of the page to be displayed
+     * @param int $perpage     Number of questions to show per page
+     * @param bool $showhidden   True if also hidden questions should be displayed. Deprecated.
+     * @param bool $showquestiontext whether the text of each question should be shown in the list. Deprecated.
+     */
     protected function display_question_list($contexts, $pageurl, $categoryandcontext,
             $cm = null, $recurse=1, $page=0, $perpage=100, $showhidden=false,
             $showquestiontext = false, $addcontexts = array()) {
