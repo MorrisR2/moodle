@@ -602,6 +602,23 @@ class core_course_courselib_testcase extends advanced_testcase {
         // Ensure blocks have been associated to the course.
         $blockcount = $DB->count_records('block_instances', array('parentcontextid' => $context->id));
         $this->assertGreaterThan(0, $blockcount);
+
+        // Ensure that the shortname isn't duplicated.
+        try {
+            $created = create_course($course);
+            $this->fail('Exception expected');
+        } catch (moodle_exception $e) {
+            $this->assertSame(get_string('shortnametaken', 'error', $course->shortname), $e->getMessage());
+        }
+
+        // Ensure that the idnumber isn't duplicated.
+        $course->shortname .= '1';
+        try {
+            $created = create_course($course);
+            $this->fail('Exception expected');
+        } catch (moodle_exception $e) {
+            $this->assertSame(get_string('courseidnumbertaken', 'error', $course->idnumber), $e->getMessage());
+        }
     }
 
     public function test_create_course_with_generator() {
@@ -624,7 +641,7 @@ class core_course_courselib_testcase extends advanced_testcase {
                     'numsections' => 5),
                 array('createsections' => true));
 
-        // Ensure all 6 (0-5) sections were created and modinfo/sectioninfo cache works properly
+        // Ensure all 6 (0-5) sections were created and course content cache works properly
         $sectionscreated = array_keys(get_fast_modinfo($course)->get_section_info_all());
         $this->assertEquals(range(0, $course->numsections), $sectionscreated);
 
@@ -637,6 +654,53 @@ class core_course_courselib_testcase extends advanced_testcase {
         // Ensure all 7 (0-6) sections were created and modinfo/sectioninfo cache works properly
         $sectionscreated = array_keys(get_fast_modinfo($course)->get_section_info_all());
         $this->assertEquals(range(0, $course->numsections + 1), $sectionscreated);
+    }
+
+    public function test_update_course() {
+        global $DB;
+
+        $this->resetAfterTest();
+
+        $defaultcategory = $DB->get_field_select('course_categories', 'MIN(id)', 'parent = 0');
+
+        $course = new stdClass();
+        $course->fullname = 'Apu loves Unit Təsts';
+        $course->shortname = 'test1';
+        $course->idnumber = '1';
+        $course->summary = 'Awesome!';
+        $course->summaryformat = FORMAT_PLAIN;
+        $course->format = 'topics';
+        $course->newsitems = 0;
+        $course->numsections = 5;
+        $course->category = $defaultcategory;
+
+        $created = create_course($course);
+        // Ensure the checks only work on idnumber/shortname that are not already ours.
+        update_course($created);
+
+        $course->shortname = 'test2';
+        $course->idnumber = '2';
+
+        $created2 = create_course($course);
+
+        // Test duplicate idnumber.
+        $created2->idnumber = '1';
+        try {
+            update_course($created2);
+            $this->fail('Expected exception when trying to update a course with duplicate idnumber');
+        } catch (moodle_exception $e) {
+            $this->assertEquals(get_string('courseidnumbertaken', 'error', $created2->idnumber), $e->getMessage());
+        }
+
+        // Test duplicate shortname.
+        $created2->idnumber = '2';
+        $created2->shortname = 'test1';
+        try {
+            update_course($created2);
+            $this->fail('Expected exception when trying to update a course with a duplicate shortname');
+        } catch (moodle_exception $e) {
+            $this->assertEquals(get_string('shortnametaken', 'error', $created2->shortname), $e->getMessage());
+        }
     }
 
     public function test_course_add_cm_to_section() {
@@ -667,13 +731,14 @@ class core_course_courselib_testcase extends advanced_testcase {
         $this->assertEquals($cmids[0], $sequence);
 
         // Add a second, this time using courseid variant of parameters.
+        $coursecacherev = $DB->get_field('course', 'cacherev', array('id' => $course->id));
         course_add_cm_to_section($course->id, $cmids[1], 1);
         $sequence = $DB->get_field('course_sections', 'sequence', array('course' => $course->id, 'section' => 1));
         $this->assertEquals($cmids[0] . ',' . $cmids[1], $sequence);
 
-        // Check modinfo was not rebuilt (important for performance if calling
-        // repeatedly).
-        $this->assertNull($DB->get_field('course', 'modinfo', array('id' => $course->id)));
+        // Check that modinfo cache was reset but not rebuilt (important for performance if calling repeatedly).
+        $this->assertGreaterThan($coursecacherev, $DB->get_field('course', 'cacherev', array('id' => $course->id)));
+        $this->assertEmpty(cache::make('core', 'coursemodinfo')->get($course->id));
 
         // Add one to section that doesn't exist (this might rebuild modinfo).
         course_add_cm_to_section($course, $cmids[2], 2);
@@ -856,8 +921,6 @@ class core_course_courselib_testcase extends advanced_testcase {
         // Perform the move
         moveto_module($cm, $newsection);
 
-        // reset of get_fast_modinfo is usually called the code calling moveto_module so call it here
-        get_fast_modinfo(0, 0, true);
         $cms = get_fast_modinfo($course)->get_cms();
         $cm = reset($cms);
 
@@ -883,11 +946,8 @@ class core_course_courselib_testcase extends advanced_testcase {
         // Perform a second move as some issues were only seen on the second move
         $newsection = get_fast_modinfo($course)->get_section_info(2);
         $oldsectionid = $cm->section;
-        $result = moveto_module($cm, $newsection);
-        $this->assertTrue($result);
+        moveto_module($cm, $newsection);
 
-        // reset of get_fast_modinfo is usually called the code calling moveto_module so call it here
-        get_fast_modinfo(0, 0, true);
         $cms = get_fast_modinfo($course)->get_cms();
         $cm = reset($cms);
 
@@ -1197,12 +1257,9 @@ class core_course_courselib_testcase extends advanced_testcase {
         $forumcm = $modinfo->cms[$forum->cmid];
         $pagecm = $modinfo->cms[$page->cmid];
 
-        // Move the forum and the page to a hidden section.
-        moveto_module($forumcm, $hiddensection);
-        moveto_module($pagecm, $hiddensection);
-
-        // Reset modinfo cache.
-        get_fast_modinfo(0, 0, true);
+        // Move the forum and the page to a hidden section, make sure moveto_module returns 0 as new visibility state.
+        $this->assertEquals(0, moveto_module($forumcm, $hiddensection));
+        $this->assertEquals(0, moveto_module($pagecm, $hiddensection));
 
         $modinfo = get_fast_modinfo($course);
 
@@ -1228,29 +1285,26 @@ class core_course_courselib_testcase extends advanced_testcase {
         $this->assertEquals($quizcm->visible, 1);
 
         // Move forum and page back to visible section.
+        // Make sure the visibility is restored to the original value (visible for forum and hidden for page).
         $visiblesection = $modinfo->get_section_info(2);
-        moveto_module($forumcm, $visiblesection);
-        moveto_module($pagecm, $visiblesection);
+        $this->assertEquals(1, moveto_module($forumcm, $visiblesection));
+        $this->assertEquals(0, moveto_module($pagecm, $visiblesection));
 
-        // Reset modinfo cache.
-        get_fast_modinfo(0, 0, true);
         $modinfo = get_fast_modinfo($course);
 
-        // Verify that forum has been made visible.
+        // Double check that forum has been made visible.
         $forumcm = $modinfo->cms[$forum->cmid];
         $this->assertEquals($forumcm->visible, 1);
 
-        // Verify that page has stayed invisible.
+        // Double check that page has stayed invisible.
         $pagecm = $modinfo->cms[$page->cmid];
         $this->assertEquals($pagecm->visible, 0);
 
-        // Move the page in the same section (this is what mod duplicate does_
-        moveto_module($pagecm, $visiblesection, $forumcm);
+        // Move the page in the same section (this is what mod duplicate does).
+        // Visibility of page remains 0.
+        $this->assertEquals(0, moveto_module($pagecm, $visiblesection, $forumcm));
 
-        // Reset modinfo cache.
-        get_fast_modinfo(0, 0, true);
-
-        // Verify that the the page is still hidden
+        // Double check that the the page is still hidden.
         $modinfo = get_fast_modinfo($course);
         $pagecm = $modinfo->cms[$page->cmid];
         $this->assertEquals($pagecm->visible, 0);
@@ -1288,13 +1342,10 @@ class core_course_courselib_testcase extends advanced_testcase {
         $this->assertEquals($section->id, $pagecm->section);
 
 
-        // Move the forum and the page to a hidden section.
-        moveto_module($pagecm, $section, $forumcm);
+        // Move the page inside the hidden section. Make sure it is hidden.
+        $this->assertEquals(0, moveto_module($pagecm, $section, $forumcm));
 
-        // Reset modinfo cache.
-        get_fast_modinfo(0, 0, true);
-
-        // Verify that the the page is still hidden
+        // Double check that the the page is still hidden.
         $modinfo = get_fast_modinfo($course);
         $pagecm = $modinfo->cms[$page->cmid];
         $this->assertEquals($pagecm->visible, 0);
@@ -1378,6 +1429,9 @@ class core_course_courselib_testcase extends advanced_testcase {
         // Create a category we are going to move this course to.
         $category = $this->getDataGenerator()->create_category();
 
+        // Create a hidden category we are going to move this course to.
+        $categoryhidden = $this->getDataGenerator()->create_category(array('visible' => 0));
+
         // Catch the update events.
         $sink = $this->redirectEvents();
 
@@ -1396,11 +1450,18 @@ class core_course_courselib_testcase extends advanced_testcase {
         // Return the moved course information from the DB.
         $movedcourse = $DB->get_record('course', array('id' => $course->id), '*', MUST_EXIST);
 
+        // Now move the course to the hidden category, this will also trigger an event.
+        move_courses(array($course->id), $categoryhidden->id);
+
+        // Return the moved course information from the DB.
+        $movedcoursehidden = $DB->get_record('course', array('id' => $course->id), '*', MUST_EXIST);
+
         // Now we want to set the sortorder back to what it was before fix_course_sortorder() was called. The reason for
         // this is because update_course() and move_courses() call fix_course_sortorder() which alters the sort order in
         // the DB, but it does not set the value of the sortorder for the course object passed to the event.
         $updatedcourse->sortorder = $sortorder;
         $movedcourse->sortorder = $category->sortorder + MAX_COURSES_IN_CATEGORY - 1;
+        $movedcoursehidden->sortorder = $categoryhidden->sortorder + MAX_COURSES_IN_CATEGORY - 1;
 
         // Capture the events.
         $events = $sink->get_events();
@@ -1425,7 +1486,19 @@ class core_course_courselib_testcase extends advanced_testcase {
         $this->assertEquals(context_course::instance($movedcourse->id)->id, $event->contextid);
         $this->assertEquals($movedcourse, $event->get_record_snapshot('course', $movedcourse->id));
         $this->assertEquals('course_updated', $event->get_legacy_eventname());
+        $this->assertEventLegacyData($movedcourse, $event);
         $expectedlog = array($movedcourse->id, 'course', 'move', 'edit.php?id=' . $movedcourse->id, $movedcourse->id);
+        $this->assertEventLegacyLogData($expectedlog, $event);
+
+        $event = $events[2];
+        $this->assertInstanceOf('\core\event\course_updated', $event);
+        $this->assertEquals('course', $event->objecttable);
+        $this->assertEquals($movedcoursehidden->id, $event->objectid);
+        $this->assertEquals(context_course::instance($movedcoursehidden->id)->id, $event->contextid);
+        $this->assertEquals($movedcoursehidden, $event->get_record_snapshot('course', $movedcoursehidden->id));
+        $this->assertEquals('course_updated', $event->get_legacy_eventname());
+        $this->assertEventLegacyData($movedcoursehidden, $event);
+        $expectedlog = array($movedcoursehidden->id, 'course', 'move', 'edit.php?id=' . $movedcoursehidden->id, $movedcoursehidden->id);
         $this->assertEventLegacyLogData($expectedlog, $event);
     }
 
@@ -1573,6 +1646,7 @@ class core_course_courselib_testcase extends advanced_testcase {
         $this->assertEquals($category2->id, $event->objectid);
         $this->assertEquals($category2context->id, $event->contextid);
         $this->assertEquals('course_category_deleted', $event->get_legacy_eventname());
+        $this->assertEventLegacyData($category2, $event);
         $expectedlog = array(SITEID, 'category', 'delete', 'index.php', $category2->name . '(ID ' . $category2->id . ')');
         $this->assertEventLegacyLogData($expectedlog, $event);
     }
@@ -1647,5 +1721,175 @@ class core_course_courselib_testcase extends advanced_testcase {
 
         // Clear the time limit, otherwise PHPUnit complains.
         set_time_limit(0);
+    }
+
+    /**
+     * Test that triggering a course_section_updated event works as expected.
+     */
+    public function test_course_section_updated_event() {
+        global $DB;
+
+        $this->resetAfterTest();
+
+        // Create the course with sections.
+        $course = $this->getDataGenerator()->create_course(array('numsections' => 10), array('createsections' => true));
+        $sections = $DB->get_records('course_sections', array('course' => $course->id));
+
+        $coursecontext = context_course::instance($course->id);
+
+        $section = array_pop($sections);
+        $section->name = 'Test section';
+        $section->summary = 'Test section summary';
+        $DB->update_record('course_sections', $section);
+
+        // Trigger an event for course section update.
+        $event = \core\event\course_section_updated::create(
+                array(
+                    'objectid' => $section->id,
+                    'courseid' => $course->id,
+                    'context' => context_course::instance($course->id)
+                )
+            );
+        $event->add_record_snapshot('course_sections', $section);
+        // Trigger and catch event.
+        $sink = $this->redirectEvents();
+        $event->trigger();
+        $events = $sink->get_events();
+        $sink->close();
+
+        // Validate the event.
+        $event = $events[0];
+        $this->assertInstanceOf('\core\event\course_section_updated', $event);
+        $this->assertEquals('course_sections', $event->objecttable);
+        $this->assertEquals($section->id, $event->objectid);
+        $this->assertEquals($course->id, $event->courseid);
+        $this->assertEquals($coursecontext->id, $event->contextid);
+        $expecteddesc = 'Course ' . $event->courseid . ' section ' . $event->other['sectionnum'] . ' updated by user ' . $event->userid;
+        $this->assertEquals($expecteddesc, $event->get_description());
+        $this->assertEquals($section, $event->get_record_snapshot('course_sections', $event->objectid));
+        $id = $section->id;
+        $sectionnum = $section->section;
+        $expectedlegacydata = array($course->id, "course", "editsection", 'editsection.php?id=' . $id, $sectionnum);
+        $this->assertEventLegacyLogData($expectedlegacydata, $event);
+    }
+
+    public function test_course_integrity_check() {
+        global $DB;
+
+        $this->resetAfterTest(true);
+        $course = $this->getDataGenerator()->create_course(array('numsections' => 1),
+           array('createsections'=>true));
+
+        $forum = $this->getDataGenerator()->create_module('forum', array('course' => $course->id),
+                array('section' => 0));
+        $page = $this->getDataGenerator()->create_module('page', array('course' => $course->id),
+                array('section' => 0));
+        $quiz = $this->getDataGenerator()->create_module('quiz', array('course' => $course->id),
+                array('section' => 0));
+        $correctseq = join(',', array($forum->cmid, $page->cmid, $quiz->cmid));
+
+        $section0 = $DB->get_record('course_sections', array('course' => $course->id, 'section' => 0));
+        $section1 = $DB->get_record('course_sections', array('course' => $course->id, 'section' => 1));
+        $cms = $DB->get_records('course_modules', array('course' => $course->id), 'id', 'id,section');
+        $this->assertEquals($correctseq, $section0->sequence);
+        $this->assertEmpty($section1->sequence);
+        $this->assertEquals($section0->id, $cms[$forum->cmid]->section);
+        $this->assertEquals($section0->id, $cms[$page->cmid]->section);
+        $this->assertEquals($section0->id, $cms[$quiz->cmid]->section);
+        $this->assertEmpty(course_integrity_check($course->id));
+
+        // Now let's make manual change in DB and let course_integrity_check() fix it:
+
+        // 1. Module appears twice in one section.
+        $DB->update_record('course_sections', array('id' => $section0->id, 'sequence' => $section0->sequence. ','. $page->cmid));
+        $this->assertEquals(
+                array('Failed integrity check for course ['. $course->id.
+                ']. Sequence for course section ['. $section0->id. '] is "'.
+                $section0->sequence. ','. $page->cmid. '", must be "'.
+                $section0->sequence. '"'),
+                course_integrity_check($course->id));
+        $section0 = $DB->get_record('course_sections', array('course' => $course->id, 'section' => 0));
+        $section1 = $DB->get_record('course_sections', array('course' => $course->id, 'section' => 1));
+        $cms = $DB->get_records('course_modules', array('course' => $course->id), 'id', 'id,section');
+        $this->assertEquals($correctseq, $section0->sequence);
+        $this->assertEmpty($section1->sequence);
+        $this->assertEquals($section0->id, $cms[$forum->cmid]->section);
+        $this->assertEquals($section0->id, $cms[$page->cmid]->section);
+        $this->assertEquals($section0->id, $cms[$quiz->cmid]->section);
+
+        // 2. Module appears in two sections (last section wins).
+        $DB->update_record('course_sections', array('id' => $section1->id, 'sequence' => ''. $page->cmid));
+        // First message about double mentioning in sequence, second message about wrong section field for $page.
+        $this->assertEquals(array(
+            'Failed integrity check for course ['. $course->id. ']. Course module ['. $page->cmid.
+            '] must be removed from sequence of section ['. $section0->id.
+            '] because it is also present in sequence of section ['. $section1->id. ']',
+            'Failed integrity check for course ['. $course->id. ']. Course module ['. $page->cmid.
+            '] points to section ['. $section0->id. '] instead of ['. $section1->id. ']'),
+                course_integrity_check($course->id));
+        $section0 = $DB->get_record('course_sections', array('course' => $course->id, 'section' => 0));
+        $section1 = $DB->get_record('course_sections', array('course' => $course->id, 'section' => 1));
+        $cms = $DB->get_records('course_modules', array('course' => $course->id), 'id', 'id,section');
+        $this->assertEquals($forum->cmid. ','. $quiz->cmid, $section0->sequence);
+        $this->assertEquals(''. $page->cmid, $section1->sequence);
+        $this->assertEquals($section0->id, $cms[$forum->cmid]->section);
+        $this->assertEquals($section1->id, $cms[$page->cmid]->section);
+        $this->assertEquals($section0->id, $cms[$quiz->cmid]->section);
+
+        // 3. Module id is not present in course_section.sequence (integrity check with $fullcheck = false).
+        $DB->update_record('course_sections', array('id' => $section1->id, 'sequence' => ''));
+        $this->assertEmpty(course_integrity_check($course->id)); // Not an error!
+        $section0 = $DB->get_record('course_sections', array('course' => $course->id, 'section' => 0));
+        $section1 = $DB->get_record('course_sections', array('course' => $course->id, 'section' => 1));
+        $cms = $DB->get_records('course_modules', array('course' => $course->id), 'id', 'id,section');
+        $this->assertEquals($forum->cmid. ','. $quiz->cmid, $section0->sequence);
+        $this->assertEmpty($section1->sequence);
+        $this->assertEquals($section0->id, $cms[$forum->cmid]->section);
+        $this->assertEquals($section1->id, $cms[$page->cmid]->section); // Not changed.
+        $this->assertEquals($section0->id, $cms[$quiz->cmid]->section);
+
+        // 4. Module id is not present in course_section.sequence (integrity check with $fullcheck = true).
+        $this->assertEquals(array('Failed integrity check for course ['. $course->id. ']. Course module ['.
+                $page->cmid. '] is missing from sequence of section ['. $section1->id. ']'),
+                course_integrity_check($course->id, null, null, true)); // Error!
+        $section0 = $DB->get_record('course_sections', array('course' => $course->id, 'section' => 0));
+        $section1 = $DB->get_record('course_sections', array('course' => $course->id, 'section' => 1));
+        $cms = $DB->get_records('course_modules', array('course' => $course->id), 'id', 'id,section');
+        $this->assertEquals($forum->cmid. ','. $quiz->cmid, $section0->sequence);
+        $this->assertEquals(''. $page->cmid, $section1->sequence);  // Yay, module added to section.
+        $this->assertEquals($section0->id, $cms[$forum->cmid]->section);
+        $this->assertEquals($section1->id, $cms[$page->cmid]->section); // Not changed.
+        $this->assertEquals($section0->id, $cms[$quiz->cmid]->section);
+
+        // 5. Module id is not present in course_section.sequence and it's section is invalid (integrity check with $fullcheck = true).
+        $DB->update_record('course_modules', array('id' => $page->cmid, 'section' => 8765));
+        $DB->update_record('course_sections', array('id' => $section1->id, 'sequence' => ''));
+        $this->assertEquals(array(
+            'Failed integrity check for course ['. $course->id. ']. Course module ['. $page->cmid.
+            '] is missing from sequence of section ['. $section0->id. ']',
+            'Failed integrity check for course ['. $course->id. ']. Course module ['. $page->cmid.
+            '] points to section [8765] instead of ['. $section0->id. ']'),
+                course_integrity_check($course->id, null, null, true));
+        $section0 = $DB->get_record('course_sections', array('course' => $course->id, 'section' => 0));
+        $section1 = $DB->get_record('course_sections', array('course' => $course->id, 'section' => 1));
+        $cms = $DB->get_records('course_modules', array('course' => $course->id), 'id', 'id,section');
+        $this->assertEquals($forum->cmid. ','. $quiz->cmid. ','. $page->cmid, $section0->sequence); // Module added to section.
+        $this->assertEquals($section0->id, $cms[$forum->cmid]->section);
+        $this->assertEquals($section0->id, $cms[$page->cmid]->section); // Section changed to section0.
+        $this->assertEquals($section0->id, $cms[$quiz->cmid]->section);
+
+        // 6. Module is deleted from course_modules but not deleted in sequence (integrity check with $fullcheck = true).
+        $DB->delete_records('course_modules', array('id' => $page->cmid));
+        $this->assertEquals(array('Failed integrity check for course ['. $course->id. ']. Course module ['.
+                $page->cmid. '] does not exist but is present in the sequence of section ['. $section0->id. ']'),
+                course_integrity_check($course->id, null, null, true));
+        $section0 = $DB->get_record('course_sections', array('course' => $course->id, 'section' => 0));
+        $section1 = $DB->get_record('course_sections', array('course' => $course->id, 'section' => 1));
+        $cms = $DB->get_records('course_modules', array('course' => $course->id), 'id', 'id,section');
+        $this->assertEquals($forum->cmid. ','. $quiz->cmid, $section0->sequence);
+        $this->assertEmpty($section1->sequence);
+        $this->assertEquals($section0->id, $cms[$forum->cmid]->section);
+        $this->assertEquals($section0->id, $cms[$quiz->cmid]->section);
+        $this->assertEquals(2, count($cms));
     }
 }
