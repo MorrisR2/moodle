@@ -304,6 +304,7 @@ class enrol_manual_lib_testcase extends advanced_testcase {
         $this->assertEquals(4, $DB->count_records('role_assignments', array('roleid'=>$studentrole->id)));
         $this->assertEquals(0, $DB->count_records('role_assignments', array('roleid'=>$teacherrole->id)));
         $this->assertEquals(1, $DB->count_records('role_assignments', array('roleid'=>$managerrole->id)));
+<<<<<<< HEAD
 
 
         $manualplugin->set_config('expiredaction', ENROL_EXT_REMOVED_SUSPEND);
@@ -328,6 +329,8 @@ class enrol_manual_lib_testcase extends advanced_testcase {
         $this->assertEquals(1, $DB->count_records('role_assignments', array('roleid'=>$teacherrole->id)));
         $this->assertTrue($DB->record_exists('user_enrolments', array('enrolid'=>$maninstance1->id, 'userid'=>$user3->id, 'status'=>ENROL_USER_SUSPENDED)));
         $this->assertTrue($DB->record_exists('user_enrolments', array('enrolid'=>$maninstance2->id, 'userid'=>$user3->id, 'status'=>ENROL_USER_SUSPENDED)));
+=======
+>>>>>>> MDL-4013-question_filtering_api_f
     }
 
     public function test_send_expiry_notifications() {
