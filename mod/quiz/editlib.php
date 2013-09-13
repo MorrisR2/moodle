@@ -1111,10 +1111,6 @@ class quiz_question_bank_view extends question_bank_view {
     protected $quizhasattempts = false;
     /** @var object the quiz settings. */
     protected $quiz = false;
-<<<<<<< HEAD
-=======
-    const MAX_TEXT_LENGTH = 200;
->>>>>>> MDL-4013-question_filtering_api_f
 
     /**
      * Constructor
@@ -1188,28 +1184,24 @@ class quiz_question_bank_view extends question_bank_view {
             return;
         }
 
-        $editcontexts = $this->contexts->having_one_edit_tab_cap($tabname);
-        array_unshift($this->searchconditions,
-                new question_bank_search_condition_hide(!$showhidden));
-        array_unshift($this->searchconditions,
-                new question_bank_search_condition_category($cat, $recurse,
-                        $editcontexts, $this->baseurl, $this->course, self::MAX_TEXT_LENGTH));
+        // Display the current category.
+        if (!$category = $this->get_current_category($cat)) {
+            return;
+        }
+        $this->print_category_info($category);
 
         echo $OUTPUT->box_start('generalbox questionbank');
-        $this->display_options_form($showquestiontext);
 
-<<<<<<< HEAD
         $this->display_category_form($this->contexts->having_one_edit_tab_cap($tabname),
                 $this->baseurl, $cat);
 
-=======
->>>>>>> MDL-4013-question_filtering_api_f
         // Continues with list of questions.
         $this->display_question_list($this->contexts->having_one_edit_tab_cap($tabname),
                 $this->baseurl, $cat, $this->cm, $recurse, $page,
                 $perpage, $showhidden, $showquestiontext,
                 $this->contexts->having_cap('moodle/question:add'));
 
+        $this->display_options($recurse, $showhidden, $showquestiontext);
         echo $OUTPUT->box_end();
     }
 
@@ -1224,7 +1216,6 @@ class quiz_question_bank_view extends question_bank_view {
         echo $OUTPUT->box_end();
     }
 
-<<<<<<< HEAD
     protected function print_category_info($category) {
         $formatoptions = new stdClass();
         $formatoptions->noclean = true;
@@ -1252,33 +1243,6 @@ class quiz_question_bank_view extends question_bank_view {
         echo '<noscript><div class="centerpara"><input type="submit" value="' .
                 get_string('go') . '" />';
         echo '</div></noscript></fieldset></form>';
-=======
-    /**
-     * Display the form with options for which questions are displayed and how they are displayed.
-     * This differs from parent display_options_form only in that it does not have the checkbox to show the question text.
-     * @param bool $showquestiontext Display the text of the question within the list. (Currently ignored)
-     */
-    protected function display_options_form($showquestiontext) {
-        global $PAGE;
-
-        echo html_writer::start_tag('form', array('method' => 'get',
-                'action' => new moodle_url('/mod/quiz/edit.php'), 'id' => 'displayoptions'));
-        echo html_writer::start_div();
-
-        foreach ($this->searchconditions as $searchcondition) {
-            echo $searchcondition->display_options($this);
-        }
-
-        $this->display_advanced_search_form();
-
-        $go = html_writer::empty_tag('input', array('type'=>'submit', 'value'=>get_string('go')));
-        echo html_writer::tag('noscript', html_writer::tag('div', $go), array('class' => 'inline'));
-
-        echo html_writer::end_div();
-        echo html_writer::end_tag('form');
-
-        $PAGE->requires->yui_module('moodle-question-searchform', 'M.question.searchform.init');
->>>>>>> MDL-4013-question_filtering_api_f
     }
 }
 
