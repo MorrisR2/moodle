@@ -208,6 +208,7 @@ function useredit_shared_definition(&$mform, $editoroptions = null, $filemanager
     $choices['2'] = get_string('emaildigestsubjects');
     $mform->addElement('select', 'maildigest', get_string('emaildigest'), $choices);
     $mform->setDefault('maildigest', 0);
+    $mform->addHelpButton('maildigest', 'emaildigest');
 
     $choices = array();
     $choices['1'] = get_string('autosubscribeyes');
@@ -260,6 +261,13 @@ function useredit_shared_definition(&$mform, $editoroptions = null, $filemanager
 
     $mform->addElement('select', 'lang', get_string('preferredlanguage'), get_string_manager()->get_list_of_translations());
     $mform->setDefault('lang', $CFG->lang);
+
+    // Multi-Calendar Support - see MDL-18375.
+    $calendartypes = \core_calendar\type_factory::get_list_of_calendar_types();
+    // We do not want to show this option unless there is more than one calendar type to display.
+    if (count($calendartypes) > 1) {
+        $mform->addElement('select', 'calendartype', get_string('preferredcalendar', 'calendar'), $calendartypes);
+    }
 
     if (!empty($CFG->allowuserthemes)) {
         $choices = array();

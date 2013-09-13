@@ -2313,5 +2313,116 @@ function xmldb_main_upgrade($oldversion) {
         upgrade_main_savepoint(true, 2013072600.01);
     }
 
+    if ($oldversion < 2013081200.00) {
+        // Define field uploadfiles to be added to external_services.
+        $table = new xmldb_table('external_services');
+        $field = new xmldb_field('uploadfiles', XMLDB_TYPE_INTEGER, '1', null, XMLDB_NOTNULL, null, '0', 'downloadfiles');
+
+        // Conditionally launch add field uploadfiles.
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        // Main savepoint reached.
+        upgrade_main_savepoint(true, 2013081200.00);
+    }
+
+    if ($oldversion < 2013082300.01) {
+        // Define the table 'backup_logs' and the field 'message' which we will be changing from a char to a text field.
+        $table = new xmldb_table('backup_logs');
+        $field = new xmldb_field('message', XMLDB_TYPE_TEXT, null, null, XMLDB_NOTNULL, null, null, 'loglevel');
+
+        // Perform the change.
+        $dbman->change_field_type($table, $field);
+
+        // Main savepoint reached.
+        upgrade_main_savepoint(true, 2013082300.01);
+    }
+
+    // Convert SCORM course format courses to singleactivity.
+    if ($oldversion < 2013082700.00) {
+        // First set relevant singleactivity settings.
+        $formatoptions = new stdClass();
+        $formatoptions->format = 'singleactivity';
+        $formatoptions->sectionid = 0;
+        $formatoptions->name = 'activitytype';
+        $formatoptions->value = 'scorm';
+
+        $courses = $DB->get_recordset('course', array('format' => 'scorm'), 'id');
+        foreach ($courses as $course) {
+            $formatoptions->courseid = $course->id;
+            $DB->insert_record('course_format_options', $formatoptions);
+        }
+        $courses->close();
+
+        // Now update course format for these courses.
+        $sql = "UPDATE {course}
+                   SET format = 'singleactivity', modinfo = '', sectioncache = ''
+                 WHERE format = 'scorm'";
+        $DB->execute($sql);
+        upgrade_main_savepoint(true, 2013082700.00);
+    }
+
+    if ($oldversion < 2013090500.01) {
+        // Define field calendartype to be added to course.
+        $table = new xmldb_table('course');
+        $field = new xmldb_field('calendartype', XMLDB_TYPE_CHAR, '30', null, XMLDB_NOTNULL, null, null);
+
+        // Conditionally launch add field calendartype.
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        // Define field calendartype to be added to user.
+        $table = new xmldb_table('user');
+        $field = new xmldb_field('calendartype', XMLDB_TYPE_CHAR, '30', null, XMLDB_NOTNULL, null, 'gregorian');
+
+        // Conditionally launch add field calendartype.
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        // Main savepoint reached.
+        upgrade_main_savepoint(true, 2013090500.01);
+    }
+
+    if ($oldversion < 2013091000.02) {
+
+        // Define field cacherev to be added to course.
+        $table = new xmldb_table('course');
+        $field = new xmldb_field('cacherev', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0', 'completionnotify');
+
+        // Conditionally launch add field cacherev.
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        // Main savepoint reached.
+        upgrade_main_savepoint(true, 2013091000.02);
+    }
+
+    if ($oldversion < 2013091000.03) {
+
+        // Define field modinfo to be dropped from course.
+        $table = new xmldb_table('course');
+        $field = new xmldb_field('modinfo');
+
+        // Conditionally launch drop field modinfo.
+        if ($dbman->field_exists($table, $field)) {
+            $dbman->drop_field($table, $field);
+        }
+
+        // Define field sectioncache to be dropped from course.
+        $field = new xmldb_field('sectioncache');
+
+        // Conditionally launch drop field sectioncache.
+        if ($dbman->field_exists($table, $field)) {
+            $dbman->drop_field($table, $field);
+        }
+
+        // Main savepoint reached.
+        upgrade_main_savepoint(true, 2013091000.03);
+    }
+
     return true;
 }
