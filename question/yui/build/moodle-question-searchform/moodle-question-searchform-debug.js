@@ -1,6 +1,4 @@
 YUI.add('moodle-question-searchform', function (Y, NAME) {
-
-
     var SELECTORS = {
             OPTIONS: '.searchoptions'
         },
@@ -20,3 +18,5 @@ YUI.add('moodle-question-searchform', function (Y, NAME) {
 
 
 }, '@VERSION@', {"requires": ["base", "node"]});
+
+
