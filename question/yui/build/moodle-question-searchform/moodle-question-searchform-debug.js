@@ -1,4 +1,6 @@
 YUI.add('moodle-question-searchform', function (Y, NAME) {
+
+
     var SELECTORS = {
             OPTIONS: '.searchoptions'
         },
