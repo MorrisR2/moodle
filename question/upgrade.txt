@@ -17,6 +17,14 @@ This files describes API changes for code that uses the question API.
 
 To add filters, local plugins can now implement the function local_[pluginname]_get_question_bank_search_conditions,
 
+2) To add columns to question_bank_view, plugins can implement $component . _question_bank_column_types, 
+   which should return an array of question_bank_column_base derived objects provided by the component, indexed by name.
+
+3) function question_bank_column_base::wanted_columns may now return any objects derived from 
+   question_bank_column_base. Previously it returned names of previously defined classes.
+   Therefore, the return type is now array(object) rather than array(string).
+
+4) The subsort separator has changed from _ to - in order to distinuguish subsorts vs frankenstyle component separators.
 
 === 2.6 ===
 

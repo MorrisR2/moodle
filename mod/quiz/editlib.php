@@ -1119,8 +1119,15 @@ class quiz_question_bank_view extends question_bank_view {
     }
 
     protected function wanted_columns() {
-        return array('addtoquizaction', 'checkbox', 'qtype', 'questionnametext',
-                'editaction', 'copyaction', 'previewaction');
+        $questionbankcolumns = array('addtoquizaction', 'checkbox', 'qtype', 'questionnametext',
+                'editaction', 'previewaction');
+        foreach ($questionbankcolumns as $fullname) {
+            $column = self::get_column_type($fullname);
+            if ($column) {
+                $columns[] = $column;
+            }
+        }
+        return $columns;
     }
 
     /**
