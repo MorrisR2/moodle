@@ -133,7 +133,6 @@ function question_can_delete_cat($todelete) {
  */
 class_alias('core_question\bank\column_base', 'question_bank_column_base', true);
 
-
 /**
  * A column with a checkbox for each question with name q{questionid}.
  *
@@ -255,7 +254,6 @@ class_alias('core_question\bank\question_text_row', 'question_bank_question_text
  * @deprecated since Moodle 2.7 MDL-40457
  */
 class_alias('core_question\bank\view', 'question_bank_view', true);
-
 
 /**
  * Common setup for all pages for editing questions.
