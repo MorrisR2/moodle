@@ -31,11 +31,7 @@
 defined('MOODLE_INTERNAL') || die();
 
 /**
- * Add an entry to the log table.
- *
- * Add an entry to the log table.  These are "action" focussed rather
- * than web server hits, and provide a way to easily reconstruct what
- * any particular student has been doing.
+ * Add an entry to the legacy log table.
  *
  * @deprecated since 2.7 use new events instead
  *
@@ -49,8 +45,7 @@ defined('MOODLE_INTERNAL') || die();
  * @return void
  */
 function add_to_log($courseid, $module, $action, $url='', $info='', $cm=0, $user=0) {
-    // TODO: Uncomment after all add_to_log() are removed from standard distribution - ideally before 2.7 release.
-    //debugging('ideally all add_to_log() calls should be replaced() with new events', DEBUG_DEVELOPER);
+    debugging('add_to_log() has been deprecated, please rewrite your code to the new events API', DEBUG_DEVELOPER);
 
     // This is a nasty hack that allows us to put all the legacy stuff into legacy storage,
     // this way we may move all the legacy settings there too.
@@ -285,8 +280,7 @@ function css_minify_css($files) {
  * @return int number of failed events
  */
 function events_trigger($eventname, $eventdata) {
-    // TODO: uncomment after conversion of all events in standard distribution
-    // debugging('events_trigger() is deprecated, please use new events instead', DEBUG_DEVELOPER);
+    debugging('events_trigger() is deprecated, please use new events instead', DEBUG_DEVELOPER);
     return events_trigger_legacy($eventname, $eventdata);
 }
 
@@ -2386,7 +2380,6 @@ function delete_course_module($id) {
     // features are not turned on, in case they were turned on previously (these will be
     // very quick on an empty table)
     $DB->delete_records('course_modules_completion', array('coursemoduleid' => $cm->id));
-    $DB->delete_records('course_modules_availability', array('coursemoduleid'=> $cm->id));
     $DB->delete_records('course_completion_criteria', array('moduleinstance' => $cm->id,
                                                             'criteriatype' => COMPLETION_CRITERIA_TYPE_ACTIVITY));
 
@@ -4022,7 +4015,7 @@ function get_context_url(context $context) {
  * @deprecated since 2.2
  * @see context::get_course_context()
  * @param context $context
- * @return course_context context of the enclosing course, null if not found or exception
+ * @return context_course context of the enclosing course, null if not found or exception
  */
 function get_course_context(context $context) {
     debugging('get_course_context() is deprecated, please use $context->get_course_context(true) instead.', DEBUG_DEVELOPER);
@@ -4388,4 +4381,23 @@ function count_login_failures($mode, $username, $lastlogin) {
 function ajaxenabled(array $browsers = null) {
     debugging('ajaxenabled() is deprecated - please update your code to assume it returns true.', DEBUG_DEVELOPER);
     return true;
+}
+
+/**
+ * Determine whether a course module is visible within a course,
+ * this is different from instance_is_visible() - faster and visibility for user
+ *
+ * @global object
+ * @global object
+ * @uses DEBUG_DEVELOPER
+ * @uses CONTEXT_MODULE
+ * @param object $cm object
+ * @param int $userid empty means current user
+ * @return bool Success
+ * @deprecated Since Moodle 2.7
+ */
+function coursemodule_visible_for_user($cm, $userid=0) {
+    debugging('coursemodule_visible_for_user() deprecated since Moodle 2.7. ' .
+            'Replace with \core_availability\info_module::is_user_visible().');
+    return \core_availability\info_module::is_user_visible($cm, $userid, false);
 }

@@ -1056,16 +1056,8 @@ function get_array_of_activities($courseid) {
                            $rawmods[$seq]->completiongradeitemnumber;
                    $mod[$seq]->completionview   = $rawmods[$seq]->completionview;
                    $mod[$seq]->completionexpected = $rawmods[$seq]->completionexpected;
-                   $mod[$seq]->availablefrom    = $rawmods[$seq]->availablefrom;
-                   $mod[$seq]->availableuntil   = $rawmods[$seq]->availableuntil;
-                   $mod[$seq]->showavailability = $rawmods[$seq]->showavailability;
                    $mod[$seq]->showdescription  = $rawmods[$seq]->showdescription;
-                   if (!empty($CFG->enableavailability)) {
-                       condition_info::fill_availability_conditions($rawmods[$seq]);
-                       $mod[$seq]->conditionscompletion = $rawmods[$seq]->conditionscompletion;
-                       $mod[$seq]->conditionsgrade  = $rawmods[$seq]->conditionsgrade;
-                       $mod[$seq]->conditionsfield  = $rawmods[$seq]->conditionsfield;
-                   }
+                   $mod[$seq]->availability = $rawmods[$seq]->availability;
 
                    $modname = $mod[$seq]->mod;
                    $functionname = $modname."_get_coursemodule_info";
@@ -1139,8 +1131,7 @@ function get_array_of_activities($courseid) {
                    // 'empty'. This list corresponds to code in the cm_info constructor.
                    foreach (array('idnumber', 'groupmode', 'groupingid', 'groupmembersonly',
                            'indent', 'completion', 'extra', 'extraclasses', 'iconurl', 'onclick', 'content',
-                           'icon', 'iconcomponent', 'customdata', 'showavailability', 'availablefrom',
-                           'availableuntil', 'conditionscompletion', 'conditionsgrade',
+                           'icon', 'iconcomponent', 'customdata', 'availability',
                            'completionview', 'completionexpected', 'score', 'showdescription')
                            as $property) {
                        if (property_exists($mod[$seq], $property) &&
@@ -1214,10 +1205,21 @@ function set_section_visible($courseid, $sectionnumber, $visibility) {
     $resourcestotoggle = array();
     if ($section = $DB->get_record("course_sections", array("course"=>$courseid, "section"=>$sectionnumber))) {
         $DB->set_field("course_sections", "visible", "$visibility", array("id"=>$section->id));
+
+        $event = \core\event\course_section_updated::create(array(
+            'context' => context_course::instance($courseid),
+            'objectid' => $section->id,
+            'other' => array(
+                'sectionnum' => $sectionnumber
+            )
+        ));
+        $event->add_record_snapshot('course_sections', $section);
+        $event->trigger();
+
         if (!empty($section->sequence)) {
             $modules = explode(",", $section->sequence);
             foreach ($modules as $moduleid) {
-                if ($cm = $DB->get_record('course_modules', array('id' => $moduleid), 'visible, visibleold')) {
+                if ($cm = get_coursemodule_from_id(null, $moduleid, $courseid)) {
                     if ($visibility) {
                         // As we unhide the section, we use the previously saved visibility stored in visibleold.
                         set_coursemodule_visible($moduleid, $cm->visibleold);
@@ -1226,6 +1228,7 @@ function set_section_visible($courseid, $sectionnumber, $visibility) {
                         set_coursemodule_visible($moduleid, 0);
                         $DB->set_field('course_modules', 'visibleold', $cm->visible, array('id' => $moduleid));
                     }
+                    \core\event\course_module_updated::create_from_cm($cm)->trigger();
                 }
             }
         }
@@ -1527,6 +1530,16 @@ function course_add_cm_to_section($courseorid, $cmid, $sectionnum, $beforemod = 
     return $section->id;     // Return course_sections ID that was used.
 }
 
+/**
+ * Change the group mode of a course module.
+ *
+ * Note: Do not forget to trigger the event \core\event\course_module_updated as it needs
+ * to be triggered manually, refer to {@link \core\event\course_module_updated::create_from_cm()}.
+ *
+ * @param int $id course module ID.
+ * @param int $groupmode the new groupmode value.
+ * @return bool True if the $groupmode was updated.
+ */
 function set_coursemodule_groupmode($id, $groupmode) {
     global $DB;
     $cm = $DB->get_record('course_modules', array('id' => $id), 'id,course,groupmode', MUST_EXIST);
@@ -1549,6 +1562,9 @@ function set_coursemodule_idnumber($id, $idnumber) {
 
 /**
  * Set the visibility of a module and inherent properties.
+ *
+ * Note: Do not forget to trigger the event \core\event\course_module_updated as it needs
+ * to be triggered manually, refer to {@link \core\event\course_module_updated::create_from_cm()}.
  *
  * From 2.4 the parameter $prevstateoverrides has been removed, the logic it triggered
  * has been moved to {@link set_section_visible()} which was the only place from which
@@ -1637,6 +1653,7 @@ function course_delete_module($cmid) {
     require_once($CFG->libdir.'/gradelib.php');
     require_once($CFG->dirroot.'/blog/lib.php');
     require_once($CFG->dirroot.'/calendar/lib.php');
+    require_once($CFG->dirroot . '/tag/lib.php');
 
     // Get the course module.
     if (!$cm = $DB->get_record('course_modules', array('id' => $cmid))) {
@@ -1698,13 +1715,11 @@ function course_delete_module($cmid) {
     // features are not turned on, in case they were turned on previously (these will be
     // very quick on an empty table).
     $DB->delete_records('course_modules_completion', array('coursemoduleid' => $cm->id));
-    $DB->delete_records('course_modules_availability', array('coursemoduleid'=> $cm->id));
-    $DB->delete_records('course_modules_avail_fields', array('coursemoduleid' => $cm->id));
     $DB->delete_records('course_completion_criteria', array('moduleinstance' => $cm->id,
                                                             'criteriatype' => COMPLETION_CRITERIA_TYPE_ACTIVITY));
 
-    // Delete the tag instances.
-    $DB->delete_records('tag_instance', array('component' => 'mod_' . $modulename, 'contextid' => $modcontext->id));
+    // Delete all tag instances associated with the instance of this module.
+    tag_delete_instances('mod_' . $modulename, $modcontext->id);
 
     // Delete the context.
     context_helper::delete_instance(CONTEXT_MODULE, $cm->id);
@@ -2597,14 +2612,14 @@ function update_course($data, $editoroptions = NULL) {
 
     // Check we don't have a duplicate shortname.
     if (!empty($data->shortname) && $oldcourse->shortname != $data->shortname) {
-        if ($DB->record_exists('course', array('shortname' => $data->shortname))) {
+        if ($DB->record_exists_sql('SELECT id from {course} WHERE shortname = ? AND id <> ?', array($data->shortname, $data->id))) {
             throw new moodle_exception('shortnametaken', '', '', $data->shortname);
         }
     }
 
     // Check we don't have a duplicate idnumber.
     if (!empty($data->idnumber) && $oldcourse->idnumber != $data->idnumber) {
-        if ($DB->record_exists('course', array('idnumber' => $data->idnumber))) {
+        if ($DB->record_exists_sql('SELECT id from {course} WHERE idnumber = ? AND id <> ?', array($data->idnumber, $data->id))) {
             throw new moodle_exception('courseidnumbertaken', '', '', $data->idnumber);
         }
     }

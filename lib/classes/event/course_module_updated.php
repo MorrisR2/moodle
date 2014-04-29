@@ -39,6 +39,7 @@ defined('MOODLE_INTERNAL') || die();
  * }
  *
  * @package    core
+ * @since      Moodle 2.6
  * @copyright  2013 Ankit Agarwal
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later.
  */
@@ -110,8 +111,12 @@ class course_module_updated extends base {
      * @return array of parameters to be passed to legacy add_to_log() function.
      */
     protected function get_legacy_logdata() {
-        return array ($this->courseid, "course", "update mod", "../mod/" . $this->other['modulename'] . "/view.php?id=" .
+        $log1 = array($this->courseid, "course", "update mod", "../mod/" . $this->other['modulename'] . "/view.php?id=" .
                 $this->objectid, $this->other['modulename'] . " " . $this->other['instanceid']);
+        $log2 = array($this->courseid, $this->other['modulename'], "update",
+               "view.php?id={$this->objectid}",
+               "{$this->other['instanceid']}", $this->objectid);
+        return array($log1, $log2);
     }
 
     /**
@@ -130,6 +135,33 @@ class course_module_updated extends base {
         if (!isset($this->other['name'])) {
             throw new \coding_exception("Field other['name'] cannot be empty");
         }
+    }
+
+    /**
+     * Set data to create new event from course module.
+     *
+     * @param \cm_info|\stdClass $cm course module instance, as returned by {@link get_coursemodule_from_id}
+     *                     or {@link get_coursemodule_from_instance}.
+     * @param \context_module $modcontext module context instance
+     * @return \core\event\base returns instance of new event
+     */
+    public static final function create_from_cm($cm, $modcontext = null) {
+        // If not set, get the module context.
+        if (empty($modcontext)) {
+            $modcontext = \context_module::instance($cm->id);
+        }
+
+        // Create event object for course module update action.
+        $event = static::create(array(
+            'context'  => $modcontext,
+            'objectid' => $cm->id,
+            'other'    => array(
+                'modulename' => $cm->modname,
+                'instanceid' => $cm->instance,
+                'name'       => $cm->name,
+            )
+        ));
+        return $event;
     }
 }
 
