@@ -142,7 +142,6 @@ class_alias('core_question\bank\column_base', 'question_bank_column_base', true)
  */
 class_alias('core_question\bank\checkbox_column', 'question_bank_checkbox_column', true);
 
-
 /**
  * A column type for the name of the question type.
  *
@@ -151,7 +150,6 @@ class_alias('core_question\bank\checkbox_column', 'question_bank_checkbox_column
  * @deprecated since Moodle 2.7 MDL-40457
  */
 class_alias('core_question\bank\question_type_column', 'question_bank_question_type_column', true);
-
 
 /**
  * A column type for the name of the question name.
@@ -162,7 +160,6 @@ class_alias('core_question\bank\question_type_column', 'question_bank_question_t
  */
 class_alias('core_question\bank\question_name_column', 'question_bank_question_name_column', true);
 
-
 /**
  * A column type for the name of the question creator.
  *
@@ -172,7 +169,6 @@ class_alias('core_question\bank\question_name_column', 'question_bank_question_n
  */
 class_alias('core_question\bank\creator_name_column', 'question_bank_creator_name_column', true);
 
-
 /**
  * A column type for the name of the question last modifier.
  *
@@ -181,7 +177,6 @@ class_alias('core_question\bank\creator_name_column', 'question_bank_creator_nam
  * @deprecated since Moodle 2.7 MDL-40457
  */
 class_alias('core_question\bank\modifier_name_column', 'question_bank_modifier_name_column', true);
-
 
 /**
  * A base class for actions that are an icon that lets you manipulate the question in some way.
@@ -219,7 +214,6 @@ class_alias('core_question\bank\copy_action_column', 'question_bank_copy_action_
  * @deprecated since Moodle 2.7 MDL-40457
  */
 class_alias('core_question\bank\preview_action_column', 'question_bank_preview_action_column', true);
-
 
 /**
  * action to delete (or hide) a question, or restore a previously hidden question.
