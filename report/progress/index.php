@@ -44,6 +44,11 @@ $firstnamesort = $sort == 'firstname';
 $format = optional_param('format','',PARAM_ALPHA);
 $excel = $format == 'excelcsv';
 $csv = $format == 'csv' || $excel;
+if ($excel) {
+    $dateformat = '%Y-%m-%d %H:%M:%S';
+} else {
+    $dateformat = get_string('strftimedatetimeshort', 'langconfig');
+}
 
 // Paging
 $start   = optional_param('start', 0, PARAM_INT);
@@ -311,9 +316,9 @@ foreach($activities as $activity) {
     $datepassedclass = $datepassed ? 'completion-expired' : '';
 
     if ($activity->completionexpected) {
-        $datetext=userdate($activity->completionexpected,get_string('strftimedate','langconfig'));
+        $datetext = userdate($activity->completionexpected, $dateformat);
     } else {
-        $datetext='';
+        $datetext = '';
     }
 
     // Some names (labels) come URL-encoded and can be very long, so shorten them
@@ -369,7 +374,7 @@ foreach($progress as $user) {
         if (array_key_exists($activity->id,$user->progress)) {
             $thisprogress=$user->progress[$activity->id];
             $state=$thisprogress->completionstate;
-            $date=userdate($thisprogress->timemodified);
+            $date = userdate($thisprogress->timemodified, $dateformat);
         } else {
             $state=COMPLETION_INCOMPLETE;
             $date='';
