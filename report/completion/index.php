@@ -54,6 +54,11 @@ $PAGE->set_pagelayout('report');
 $firstnamesort = ($sort == 'firstname');
 $excel = ($format == 'excelcsv');
 $csv = ($format == 'csv' || $excel);
+if ($excel) {
+    $dateformat = '%c';
+} else {
+    $dateformat = get_string('strftimedatetimeshort', 'langconfig');
+}
 
 // Load CSV library
 if ($csv) {
@@ -595,7 +600,7 @@ foreach ($progress as $user) {
                 $state = COMPLETION_INCOMPLETE;
             }
             if ($is_complete) {
-                $date = userdate($criteria_completion->timecompleted, get_string('strftimedatetimeshort', 'langconfig'));
+                $date = userdate($criteria_completion->timecompleted, $dateformat);
             } else {
                 $date = '';
             }
@@ -644,7 +649,7 @@ foreach ($progress as $user) {
         $a->state    = $describe;
 
         if ($is_complete) {
-            $a->date = userdate($criteria_completion->timecompleted, get_string('strftimedatetimeshort', 'langconfig'));
+            $a->date = userdate($criteria_completion->timecompleted, $dateformat);
         } else {
             $a->date = '';
         }
@@ -698,7 +703,7 @@ foreach ($progress as $user) {
     $a = new StdClass;
 
     if ($ccompletion->is_complete()) {
-        $a->date = userdate($ccompletion->timecompleted, get_string('strftimedatetimeshort', 'langconfig'));
+        $a->date = userdate($ccompletion->timecompleted, $dateformat);
     } else {
         $a->date = '';
     }
