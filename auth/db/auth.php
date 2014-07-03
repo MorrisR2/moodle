@@ -105,32 +105,37 @@ class auth_plugin_db extends auth_plugin_base {
 
             $authdb = $this->db_init();
 
-            if ($this->config->passtype === 'md5') {   // Re-format password accordingly.
-                $extpassword = md5($extpassword);
-            } else if ($this->config->passtype === 'sha1') {
-                $extpassword = sha1($extpassword);
-            }
-
-            $rs = $authdb->Execute("SELECT *
-                                      FROM {$this->config->table}
-                                     WHERE {$this->config->fielduser} = '".$this->ext_addslashes($extusername)."'
-                                           AND {$this->config->fieldpass} = '".$this->ext_addslashes($extpassword)."'");
+            $rs = $authdb->Execute("SELECT {$this->config->fieldpass} FROM {$this->config->table}
+                                     WHERE {$this->config->fielduser} = '".$this->ext_addslashes($extusername)."'");
             if (!$rs) {
                 $authdb->Close();
                 debugging(get_string('auth_dbcantconnect','auth_db'));
                 return false;
             }
 
-            if (!$rs->EOF) {
-                $rs->Close();
-                $authdb->Close();
-                return true;
-            } else {
+            if ($rs->EOF) {
                 $rs->Close();
                 $authdb->Close();
                 return false;
             }
 
+            $prefix = '';
+            if (strpos($rs->fields[$this->config->fieldpass], '{') === 0) {
+                $prefix = substr($rs->fields[$this->config->fieldpass], 0, strpos($rs->fields[$this->config->fieldpass], '}') + 1);
+            }
+
+            if ($this->config->passtype === 'md5') {
+                $extpassword = $prefix . md5($extpassword);
+            } else if ($this->config->passtype === 'sha1') {
+                $extpassword = $prefix . sha1($extpassword);
+            } else if ($this->config->passtype === 'salt') {
+                $extpassword = $prefix . crypt($extpassword, substr($rs->fields[$this->config->fieldpass], strlen($prefix)));
+            }
+            if (strcmp($extpassword, $rs->fields[$this->config->fieldpass]) == 0) {
+                return true;
+            }
+
+            return false;
         }
     }
 
