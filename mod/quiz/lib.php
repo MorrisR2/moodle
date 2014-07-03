@@ -1822,7 +1822,6 @@ function quiz_get_navigation_options() {
 function quiz_get_completion_state($course, $cm, $userid, $type) {
     global $DB;
     global $CFG;
-    $result = $type;
 
     if (!$quiz = $DB->get_record('quiz', array('id' => $cm->instance))) {
         print_error('cannotfindquiz');
@@ -1831,16 +1830,17 @@ function quiz_get_completion_state($course, $cm, $userid, $type) {
     if ($quiz->completionattemptsexhausted) {
         $attempts = quiz_get_user_attempts($quiz->id, $userid, 'finished', true);
         if (! $attempts) {
-            return completion_info::aggregate_completion_states($type, $result, false);
+            return completion_info::aggregate_completion_states($type, $type, false);
         }
         $lastfinishedattempt = end($attempts);
         $context = get_context_instance(CONTEXT_MODULE, $cm->id);
         $quizobj = quiz::create($quiz->id, $userid);
         $accessmanager = new quiz_access_manager($quizobj, time(),
-            has_capability('mod/quiz:ignoretimelimits', $context, null, false));
+            has_capability('mod/quiz:ignoretimelimits', $context, $userid, false));
 
         if ( $accessmanager->is_finished(count($attempts), $lastfinishedattempt) ) {
-            return completion_info::aggregate_completion_states($type, $result, true);
+            // return completion_info::aggregate_completion_states($type, $type, true);
+            return true;
         }
     }
 
@@ -1849,11 +1849,13 @@ function quiz_get_completion_state($course, $cm, $userid, $type) {
         require_once($CFG->libdir . '/gradelib.php');
         $grades = grade_get_grades($course->id, 'mod', 'quiz', $cm->instance, $userid);
         if (empty($grades->items[0]->grades)) {
-            return completion_info::aggregate_completion_states($type, $result, false);
+            // return completion_info::aggregate_completion_states($type, $type, false);
+            return $false;
         }
         $grade = reset($grades->items[0]->grades);
         $passed = ( isset($grades->items[0]->gradepass) && ($grade->grade >= $grades->items[0]->gradepass) );
-        return completion_info::aggregate_completion_states($type, $result, $passed);
+        // return completion_info::aggregate_completion_states($type, $type, $passed);
+        return $true;
     }
     return $type;
 }
