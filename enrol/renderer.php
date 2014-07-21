@@ -246,6 +246,9 @@ class core_enrol_renderer extends plugin_renderer_base {
                 $groupoutput .= html_writer::tag('div', $name, array('class'=>'group', 'rel'=>$groupid));
             }
         }
+        if (count($groups) == 0) {
+           $groupoutput .= html_writer::tag('p', 'No sequence', array('class'=>'nogroup', 'style'=>'color: red'));
+        }
         $output = '';
         if ($canmanagegroups && (count($groups) < count($allgroups))) {
             $url = new moodle_url($pageurl, array('action'=>'addmember', 'user'=>$userid));
