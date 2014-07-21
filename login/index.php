@@ -24,6 +24,27 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+// Nessus scanner checks for evil null vulnerability here.
+// 2013-02-04 Ray Morris Ray.Morris@teex.tamu.edu
+function remove_evil_nulls() {
+    foreach ($_REQUEST as &$param) {
+        if (  is_string($param) && (! is_numeric($param) )  ) {
+            $param = str_replace(chr(0), "", $param);
+        }
+    }
+    foreach ($_GET as &$param) {
+        if (  is_string($param) && (! is_numeric($param) )  ) {
+            $param = str_replace(chr(0), "", $param);
+        }
+    }
+    foreach ($_POST as &$param) {
+        if (  is_string($param) && (! is_numeric($param) )  ) {
+            $param = str_replace(chr(0), "", $param);
+        }
+    }
+}
+remove_evil_nulls();
+
 require('../config.php');
 require_once('lib.php');
 
