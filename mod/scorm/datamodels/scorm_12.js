@@ -16,6 +16,7 @@
 //
 // SCORM 1.2 API Implementation
 //
+
 function SCORMapi1_2(def, cmiobj, cmiint, cmistring256, cmistring4096, scormdebugging, scormauto, scormid, cfgwwwroot, sesskey, scoid, attempt, viewmode, cmid, currentorg) {
 
     var prerequrl = cfgwwwroot + "/mod/scorm/prereqs.php?a="+scormid+"&scoid="+scoid+"&attempt="+attempt+"&mode="+viewmode+"&currentorg="+currentorg+"&sesskey="+sesskey;
@@ -338,6 +339,9 @@ function SCORMapi1_2(def, cmiobj, cmiint, cmistring256, cmistring4096, scormdebu
                             }
                             //Store data
                             if (errorCode == "0") {
+                                if (typeof SCORMapi1_2.timeout == 'undefined') {
+                                    SCORMapi1_2.timeout = window.setTimeout(API.LMSCommit,60000, "");
+                                }
                                 if ((typeof eval('datamodel["'+elementmodel+'"].range')) != "undefined") {
                                     range = eval('datamodel["'+elementmodel+'"].range');
                                     ranges = range.split('#');
@@ -388,6 +392,10 @@ function SCORMapi1_2(def, cmiobj, cmiint, cmistring256, cmistring4096, scormdebu
 
     function LMSCommit (param) {
         errorCode = "0";
+        if (SCORMapi1_2.timeout) {
+           window.clearTimeout(SCORMapi1_2.timeout);
+           delete SCORMapi1_2.timeout;
+        }
         if (param == "") {
             if (Initialized) {
                 result = StoreData(cmi,false);

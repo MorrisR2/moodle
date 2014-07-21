@@ -19,6 +19,7 @@
 //
 // SCORM 1.3 API Implementation
 //
+
 function SCORMapi1_3(def, cmiobj, cmiint, cmicommentsuser, cmicommentslms, scormdebugging, scormauto, scormid, cfgwwwroot, sesskey, scoid, attempt, viewmode, cmid, currentorg) {
 
     var prerequrl = cfgwwwroot + "/mod/scorm/prereqs.php?a="+scormid+"&scoid="+scoid+"&attempt="+attempt+"&mode="+viewmode+"&currentorg="+currentorg+"&sesskey="+sesskey;
@@ -730,6 +731,9 @@ function SCORMapi1_3(def, cmiobj, cmiint, cmicommentsuser, cmicommentslms, scorm
                             }
                             //Store data
                             if (errorCode == "0") {
+                                if (typeof SCORMapi1_3.timeout == 'undefined') {
+                                   SCORMapi1_3.timeout = window.setTimeout(API_1484_11.Commit,60000, "");
+                                }
 
                                 if ((typeof eval('datamodel["'+elementmodel+'"].range')) != "undefined") {
                                     range = eval('datamodel["'+elementmodel+'"].range');
@@ -899,6 +903,10 @@ function SCORMapi1_3(def, cmiobj, cmiint, cmicommentsuser, cmicommentslms, scorm
 
     function Commit (param) {
         errorCode = "0";
+        if (SCORMapi1_3.timeout) {
+            window.clearTimeout(SCORMapi1_3.timeout);
+            delete SCORMapi1_3.timeout;
+        }
         if (param == "") {
             if ((Initialized) && (!Terminated)) {
                 var AJAXResult = StoreData(cmi,false);
