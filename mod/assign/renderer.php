@@ -737,6 +737,11 @@ class mod_assign_renderer extends plugin_renderer_base {
             }
         }
 
+        global $COURSE;
+        $o .= $this->output->box_start('boxaligncenter submissionaction');
+        $o .= $this->output->single_button(new moodle_url('/course/view.php',
+                      array('id' => $COURSE->id)), 'Return to course', 'get');
+        $o .= $this->output->box_end();
         $o .= $this->output->container_end();
         return $o;
     }
