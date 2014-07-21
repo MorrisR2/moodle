@@ -1,0 +1,166 @@
+/** Path: theme pagelayout **/
+
+/*********************************************************************************************
+
+    right column: 28%
+    padding left/right column: 10px
+    padding center column: 20px
+
+**********************************************************************************************/
+
+body {
+    margin: auto 0px;
+    width: auto;
+}
+
+#page {
+    width: 100%;
+}
+
+#page-header {
+    float: left;
+    width: 100%;
+}
+
+#page-content {
+    clear: both;
+    float: left;
+    overflow: hidden;
+    position: relative;
+    width: 100%;
+}
+
+#page-content #region-main-box {
+    float: left;
+    right: 24%;
+    position: relative;
+    width: 100%;
+}
+
+#page-content #region-post-box {
+    float: left;
+    right: 74%;
+    position: relative;
+    width: 100%;
+}
+
+#page-content #region-main {
+    float: left;
+    overflow: hidden;
+    position: relative;
+    margin-right: 0px;
+    left: 100%;
+    width: 74%;
+}
+
+#page-content #region-post {
+    float: left;
+    overflow: hidden;
+    position: relative;
+    left: 100%;
+    width: 25%;
+}
+
+#page-content #region-main .region-content {
+    overflow: hidden;
+    padding: 50px 15px 20px 0;
+    /* width: 100%; 
+    overflow: auto;
+    */
+}
+
+table.boxaligncenter.generaltable.user-grade{
+	background-color:#FFF;
+	}
+
+#page-content #region-post .region-content {
+    overflow: hidden;
+    padding: 100px 0 0 10px;
+	background:url(/theme/www976/pix/teexlogo_side.png) center top no-repeat;
+}
+
+#page-footer {
+    clear: both;
+    float: left;
+    width: 100%;
+	background-color: #012f47;
+	padding-top:20px;
+	color:#FFF;
+}
+
+#page-footer a {
+    color: #fff;
+	text-decoration:underline;
+	font-weight:bold;
+}
+
+
+/** No blocks whatsoever **/
+
+.content-only #page-content #region-main-box {
+    right: 0%;
+}
+
+.content-only #page-content #region-post-box {
+    right: 100%;
+}
+
+.content-only #page-content #region-main {
+    left: 100%;
+    width: 100%;
+}
+
+.content-only #page-content #region-pre {
+    width: 0%;
+}
+
+.content-only #page-content #region-post {
+    width: 0%;
+}
+
+.pagelayout-report #page-content #region-main {overflow:auto;}
+.pagelayout-report #page-content #region-main .region-content {overflow:visible;}
+
+#page-enrol-manual-unenrolself #region-main .region-content #region-header.inside {
+    margin-bottom: 110px;
+}
+
+
+.course-content ul.topics { clear: both; } 
+
+/* This section is for tiled activities on the main course page. */
+    /* For some reason it won't work with .mod-indent, so I've used this selector */
+    .topics .content .quiz > div {
+        display: inline-block;
+        vertical-align: top;
+        position: relative;
+        padding: 1em;
+        margin: 1em;
+        min-width: 24em;
+    }
+
+    .topics .content li {
+        display: inline;
+        list-style-type: none;
+    }
+
+
+     div.mod-indent {
+         /* border: medium #D0F0FF solid; */
+     }
+
+.path-course-view li.activity span.autocompletion, .path-course-view li.activity form.togglecompletion {
+    display: block;
+    width: 188px; 
+    position: absolute;
+    top: 90%;
+    text-align: center;
+    right: auto;
+}
+
+.activityicon[alt=Quiz] { display: none; }
+
+[title=Incorrect] .trafficlight { background-color: rgba( 200, 54, 54, 0.5); } 
+[title=Correct] .trafficlight { background-color: rgba(54, 200, 54, 0.5); }
+
+

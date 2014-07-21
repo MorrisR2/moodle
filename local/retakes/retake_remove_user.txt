@@ -1,0 +1,36 @@
+mdl_grade_grades
+mdl_groups_members
+mdl_lesson_attempts
+mdl_lesson_branch
+mdl_lesson_grades
+mdl_lesson_high_scores
+mdl_lesson_timer
+mdl_lti_submission
+mdl_my_pages
+mdl_post
+mdl_quiz_attempts
+mdl_quiz_grades
+mdl_quiz_overrides
+mdl_repository_instances
+mdl_role_assignments
+
+mdl_scorm_scoes_track
+mdl_course_modules_completion
+mdl_course_completions
+mdl_course_completion_crit_compl
+
+
+mdl_local_teexscodat_course_sess, mdl_local_teexscodat_modul_sess, mdl_local_teexscodat_quiz_sess
+
+enrolment tables
+
+
+is a portfolio instance related to a course somehow?
+mdl_portfolio_instance_user
+mdl_portfolio_tempdata
+
+what does the rating table reference?
+
+do we want to clear the attendance register?
+
+

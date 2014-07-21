@@ -1,0 +1,112 @@
+<?php
+if ( empty($_REQUEST['userid']) ) {
+	$_REQUEST['userid'] = 3;
+	$baseurl = 'https://teextest13.teex.tamus.edu/academy/ffApp/ffaApp.php?fromflash=1';
+}
+?>
+<html>
+<head>
+<script type="text/javascript">
+	baseurl = '<?php echo($baseurl) ?>';
+</script>
+<script type="text/javascript" src="exp_collapse.js"></script>
+<script type="text/javascript" src="importnode.js"></script>
+<script type="text/javascript" src="https://teextest13.teex.tamus.edu/academy/xml/xmltree.js"></script>
+
+<style type="text/css">
+dl
+{
+	margin: 1em;
+    margin-left: 3em;
+	padding: 0;
+	display:-moz-inline-stack;
+	display:inline-block;
+	zoom:1;
+	*display:inline;
+}
+
+dt
+{
+	background-color: #FFEFE0;
+	color: #202020;
+	padding: .5em;
+	font-weight: bold;
+	border: 1px solid #131210;
+	min-width: 8em;
+}
+
+dd
+{
+	margin: 0 0 1em 0;
+	background: #FFF9F0;
+	text-align: center;
+	padding: .5em .5em;
+	border: 1px solid #131210;
+}
+
+dl.attributes { vertical-align: top; }
+.attributes dt { background: #ffe0e0; color: #000000; }
+.attributes dd { background: #fff0f0; color: #000000; }
+
+.hide { display: none; }
+.show { display: block;}
+
+button.delete {
+		background: url('Andy_Trash_Can_18.png');
+        background-repeat: no-repeat;
+        background-position:center;
+        height: 20px; width: 20px;
+		float: right;
+        }
+
+.expandable button.expandcollapse { 
+		background: url('plus-8.png'); 
+        background-repeat: no-repeat;
+        background-position:center;
+        height: 20px; width: 20px;
+		border: 1px outset;
+		}
+
+.collapsible button.expandcollapse {
+        background: url('minus-8.png');
+        background-repeat: no-repeat;
+        background-position:center;
+        height: 20px; width: 20px;
+		border: 1px outset;
+}
+
+dd dd { background: #ECF0F0; }
+dd dd dd { background: #DBD8D8; }
+dd dd dd dd { background: #ECF0F0; }
+dd dd dd dd dd { background: #DBD8D8; }
+dd dd dd dd dd dd { background: #ECF0F0; }
+dd dd dd dd dd dd dd { background: #DBD8D8; }
+dd dd dd dd dd dd dd dd { background: #ECF0F0; }
+dd dd dd dd dd dd dd dd dd { background: #DBD8D8; }
+
+/* #savexml { display: none; } */
+
+</style>
+</head>
+<body onload="displayResult(<?php echo $_REQUEST['userid'] ?>);">
+	<h1>Course XML for user <?php echo $_REQUEST['userid'] ?></h1>
+	<p>Click an element to expand or close it.</p>
+	<form action="index.php">
+		User ID: <input name="userid" id="userid" value="<?php echo $_REQUEST['userid'] ?>">
+		<input type="submit" value="Retrieve XML">
+	</form>
+	<div id="xmltohtml"></div>
+
+	<p>Edit either the tree &uarr; or the source &darr;</p>
+	<form name="saveform" id="saveform" action="<?php echo($baseurl) ?>" method="POST">
+		<input type="hidden" name="req" value="updatecourseinfo_backup">
+		<input type="hidden" name="fromflash" value="true">
+		<input type="hidden" name="user_un" id="saveuserid" value="<?php echo $_REQUEST['userid'] ?>">
+		<textarea name="cxml" id="savexml" cols="82" rows="40"></textarea>
+	</form>
+
+ <button onclick="saveXml(<?php echo $_REQUEST['userid'] ?>)">Save Changes</button>
+ <p><small>Saving changes will also download a backup file</small></p>
+
+</body>
+</html>

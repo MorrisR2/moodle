@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<XMLDB PATH="local/teexscodat/db" VERSION="20120718" COMMENT="XMLDB file for Moodle local/teexscodat"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:noNamespaceSchemaLocation="../../../lib/xmldb/xmldb.xsd"
+>
+  <TABLES>
+    <TABLE NAME="local_teexscodat_course_sess" COMMENT="Local data about course session time and completion progress" NEXT="local_teexscodat_modul_sess">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" SEQUENCE="true" NEXT="student_id"/>
+        <FIELD NAME="student_id" TYPE="int" LENGTH="20" NOTNULL="true" UNSIGNED="true" SEQUENCE="false" PREVIOUS="id" NEXT="course_id"/>
+        <FIELD NAME="course_id" TYPE="int" LENGTH="16" NOTNULL="true" UNSIGNED="false" SEQUENCE="false" PREVIOUS="student_id" NEXT="was_completed"/>
+        <FIELD NAME="was_completed" TYPE="int" LENGTH="1" NOTNULL="false" UNSIGNED="true" SEQUENCE="false" PREVIOUS="course_id" NEXT="pct_completed"/>
+        <FIELD NAME="pct_completed" TYPE="int" LENGTH="3" NOTNULL="false" UNSIGNED="true" SEQUENCE="false" PREVIOUS="was_completed" NEXT="session_start_gmt"/>
+        <FIELD NAME="session_start_gmt" TYPE="int" LENGTH="10" NOTNULL="false" UNSIGNED="true" SEQUENCE="false" PREVIOUS="pct_completed" NEXT="session_seconds"/>
+        <FIELD NAME="session_seconds" TYPE="int" LENGTH="6" NOTNULL="false" UNSIGNED="true" SEQUENCE="false" PREVIOUS="session_start_gmt" NEXT="course_seconds"/>
+        <FIELD NAME="course_seconds" TYPE="int" LENGTH="8" NOTNULL="false" UNSIGNED="true" DEFAULT="0" SEQUENCE="false" PREVIOUS="session_seconds" NEXT="passed"/>
+        <FIELD NAME="passed" TYPE="int" LENGTH="1" NOTNULL="false" UNSIGNED="true" SEQUENCE="false" PREVIOUS="course_seconds"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+      </KEYS>
+    </TABLE>
+    <TABLE NAME="local_teexscodat_modul_sess" COMMENT="Local TEEX completion and timing information for modules within Scorms" PREVIOUS="local_teexscodat_course_sess" NEXT="local_teexscodat_quiz_sess">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" SEQUENCE="true" NEXT="was_completed"/>
+        <FIELD NAME="was_completed" TYPE="int" LENGTH="1" NOTNULL="false" UNSIGNED="true" SEQUENCE="false" PREVIOUS="id" NEXT="pct_completed"/>
+        <FIELD NAME="pct_completed" TYPE="int" LENGTH="3" NOTNULL="false" UNSIGNED="true" SEQUENCE="false" PREVIOUS="was_completed" NEXT="location"/>
+        <FIELD NAME="location" TYPE="char" LENGTH="1024" NOTNULL="false" SEQUENCE="false" PREVIOUS="pct_completed" NEXT="furthest_page"/>
+        <FIELD NAME="furthest_page" TYPE="int" LENGTH="3" NOTNULL="false" UNSIGNED="false" SEQUENCE="false" PREVIOUS="location" NEXT="module_seconds"/>
+        <FIELD NAME="module_seconds" TYPE="int" LENGTH="8" NOTNULL="false" UNSIGNED="true" SEQUENCE="false" PREVIOUS="furthest_page" NEXT="quiz_id"/>
+        <FIELD NAME="quiz_id" TYPE="int" LENGTH="12" NOTNULL="false" UNSIGNED="true" SEQUENCE="false" PREVIOUS="module_seconds" NEXT="course_id"/>
+        <FIELD NAME="course_id" TYPE="int" LENGTH="12" NOTNULL="false" UNSIGNED="true" SEQUENCE="false" PREVIOUS="quiz_id"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+      </KEYS>
+    </TABLE>
+    <TABLE NAME="local_teexscodat_quiz_sess" COMMENT="Local TEEX tracking about attempts of quizzes which are embedded in SCORMS" PREVIOUS="local_teexscodat_modul_sess">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" SEQUENCE="true" NEXT="module_id"/>
+        <FIELD NAME="module_id" TYPE="int" LENGTH="12" NOTNULL="false" UNSIGNED="true" SEQUENCE="false" PREVIOUS="id" NEXT="attempt_seq"/>
+        <FIELD NAME="attempt_seq" TYPE="int" LENGTH="6" NOTNULL="false" UNSIGNED="true" SEQUENCE="false" PREVIOUS="module_id" NEXT="score"/>
+        <FIELD NAME="score" TYPE="int" LENGTH="3" NOTNULL="false" UNSIGNED="false" SEQUENCE="false" PREVIOUS="attempt_seq" NEXT="xml_data"/>
+        <FIELD NAME="xml_data" TYPE="text" LENGTH="medium" NOTNULL="false" SEQUENCE="false" PREVIOUS="score"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+      </KEYS>
+    </TABLE>
+  </TABLES>
+</XMLDB>

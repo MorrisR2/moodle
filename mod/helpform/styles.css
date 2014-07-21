@@ -1,0 +1,14 @@
+.path-mod-helpform .smalltext {font-size: 0.75em;}
+
+.path-mod-helpform .helpformtable .rblock label {display: block;}
+.path-mod-helpform .helpformtable .foundthat,
+.path-mod-helpform .helpformtable .preferthat {white-space: nowrap;}
+.path-mod-helpform .helpformtable .buttoncell {width:5%;}
+.path-mod-helpform .helpformtable .optioncell,
+.path-mod-helpform .helpformtable .questioncell {width:50%;vertical-align:top;}
+.path-mod-helpform .helpformtable .whitecell {background-color:white;}
+
+.path-mod-helpform #helpformform th {font-weight: normal;text-align: left;}
+.path-mod-helpform #helpformform th.hresponse {text-align: center;width: 9%;}
+
+#page-mod-helpform-report .fullnamecell {width:10%;vertical-align:top;white-space: nowrap;}

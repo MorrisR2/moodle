@@ -1,0 +1,72 @@
+<html>
+<head>
+<script type="text/javascript" src="sessToDb.js"></script>
+<script type="text/javascript" src="rpc.js"></script>
+
+<script type="text/javascript">
+	// var token = '75f0e435c793bccd744d03a3d09309ac';
+	function save_course() {
+		var session = new Object;
+		session.student_id = 1;
+		session.course_id  = 2;
+		session = course_sess2db(session);
+		course_session_id = session.id;
+        	alert("session id number is: " + course_session_id);
+        	return session;
+	}
+
+	function update_course() {
+        	var session = new Object;
+        	session.id = course_session_id;
+        	session.pct_completed = 25;
+        	session = course_sess2db(session);
+        	alert("student ID is still " + session.student_id);
+        	return session;
+	}
+
+
+    function save_quiz() {
+        session = teex_quiz_session(1);
+        alert(session.id);
+        return session;
+    }
+
+    function update_quiz() {
+        var session = new Object;
+        session.username = 'bobama';
+        session.course_id  = 2;
+        session = teex_quiz_session(session);
+        course_session_id = session.id;
+            alert("session id number is: " + course_session_id);
+            return session;
+    }
+
+</script>
+</head>
+<body>
+
+<h2>Local custom session data web service sample</h2>
+
+<p>
+<button value="update course" onClick="save_course();">Create / Save Course</button>
+<button value="update course" onClick="update_course();">Update Course</button>
+</p>
+
+<p>
+<button value="update course" onClick="save_quiz();">Create / Save Quiz</button>
+<button value="update course" onClick="update_quiz();">Update Quiz</button>
+</p>
+
+<p>This web service saves local data about course sessions, module sessions, and quiz sessions.</p>
+<p>
+"View source" to see how to use it.  Note that you call the same function,  course_sess2db(session), to save a new session, update a session you created previously, or retrieve a session. The service does whatever makes sense with what you pass it.  If session.id is set, it updates the session with whatever fields you set. In all cases, it returns the current state of the session object.
+</p>
+
+<p>
+Full reference documentation can be found under local_* in the 
+<a href="../../../admin/webservice/documentation.php" target="_new">Moodle web service documentation</a>.
+</p>
+
+</body>
+</html>
+

@@ -1,0 +1,254 @@
+<?php
+// This file is part of Moodle - http://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+defined('MOODLE_INTERNAL') || die;
+
+global $CFG;
+require_once($CFG->dirroot . '/question/editlib.php');
+
+
+
+function local_searchbytags_get_question_bank_search_conditions($caller) {
+    return array( new local_searchbytags_question_bank_search_condition($caller));
+}
+
+function local_searchbytags_question_bank_column_types($question_bank_view) {
+    return array('tags' => new local_searchbytags_question_bank_column($question_bank_view));
+}
+
+
+class local_searchbytags_question_bank_search_condition  extends question_bank_search_condition  {
+    protected $tags;
+    protected $where;
+    protected $params;
+
+    public function __construct() {
+        $this->tags = optional_param_array('tags', array(), PARAM_TEXT);
+        if ( (!empty($this->tags)) && $this->tags[0] == null) {
+            array_shift($this->tags);
+        }
+        // print_r($this->tags); exit;
+        if (! empty($this->tags) ) {
+            $this->init();
+        }
+    }
+
+    public function where() {
+        return $this->where;
+    }
+
+    public function params() {
+        return $this->params;
+    }
+
+    public function display_options_adv() {
+        global $DB;
+        global $output;
+        require_login();
+        $tags = $this->get_tags_used();
+        echo html_writer::label('Show questions with tags:', 'tags[]');
+        echo "<br />\n";
+        echo html_writer::select($tags, 'tags[]', $this->tags, array(''=>'--show all--'), array('multiple'=>'true', 'class'=>'searchoptions'));
+    }
+
+    private function init() {
+        global $DB;
+
+        if (! is_numeric($this->tags[0]) ) {
+            list($tagswhere, $tagsparams) = $DB->get_in_or_equal($this->tags, SQL_PARAMS_NAMED, 'tag');
+            $tagids = $DB->get_fieldset_select('tag', 'id', 'name ' . $tagswhere, $tagsparams);
+        } else {
+            $tagids = $this->tags;
+        }
+        list($where, $this->params) = $DB->get_in_or_equal($tagids, SQL_PARAMS_NAMED, 'tag');
+        $this->where = "(SELECT COUNT(*) as tagcount FROM {tag_instance} ti WHERE itemid=q.id AND tagid $where)=".
+                       count($this->tags);
+    }
+    
+    private function get_tags_used() {
+        global $DB;
+        $categories = $this->get_categories();
+        list($catidtest, $params) = $DB->get_in_or_equal($categories, SQL_PARAMS_NAMED, 'cat');
+        $sql = "SELECT name as value, name as display FROM {tag} WHERE id IN (SELECT DISTINCT tagi.tagid FROM {tag_instance} tagi, {question} WHERE itemtype='question' AND {question}.id=tagi.itemid AND category $catidtest) ORDER BY name";
+        // print "sql: $sql\n"; print_r($params);
+        return $DB->get_records_sql_menu($sql, $params);
+    }
+
+    private function get_categories_b() {
+        global $DB;
+
+
+// function question_edit_setup($edittab, $baseurl, $requirecmid = false, $requirecourseid = true) {
+
+
+        // list($thispageurl, $contexts, $cmid, $cm, $module, $pagevars) = question_edit_setup('questions', '/question/edit.php', false, false);
+
+        $cat = optional_param('cat', null, PARAM_ALPHAEXT);
+        if (empty($cat) || !$category = $this->get_current_category($cat)) {
+            return;
+        }
+
+        if ($cat) {
+            $categoryids = question_categorylist($category->id);
+        } else {
+            $categoryids = array($category->id);
+        }
+        return $categoryids;
+    }
+
+    /*
+     * Look up the category record based on cateogry ID and context
+     * @param string $categoryandcontext categoryID,contextID as used with question_bank_view->display()
+     * @return stdClass The category record
+     */
+    protected function get_current_category($categoryandcontext) {
+        global $DB;
+        echo "categoryandcontext: $categoryandcontext\n";
+        list($categoryid, $contextid) = explode(',', $categoryandcontext);
+        if (!$categoryid) {
+            return false;
+        }
+
+        if (!$category = $DB->get_record('question_categories',
+                array('id' => $categoryid, 'contextid' => $contextid))) {
+            return false;
+        }
+        return $category;
+    }
+
+    // This function is one of two versions of get_categories()
+    private function get_categories() {
+        $cmid = optional_param('cmid',0,PARAM_INT);
+        $categoryparam = optional_param('category','',PARAM_TEXT);
+        $courseid = optional_param('courseid',0,PARAM_INT);
+
+        if ($cmid) {
+            list($thispageurl, $contexts, $cmid, $cm, $quiz, $pagevars) = question_edit_setup('editq', '/mod/quiz/edit.php', true);
+            if ($pagevars['cat']) {
+                $categoryparam = $pagevars['cat'];
+            }
+        }
+
+        if ($categoryparam) {
+            $catandcontext = explode(',', $categoryparam);
+            $cats = question_categorylist($catandcontext[0]);
+            return $cats;
+        } elseif ($cmid){
+            list($module, $cm) = get_module_from_cmid($cmid);
+            $courseid = $cm->course;
+            require_login($courseid, false, $cm);
+            $thiscontext = context_module::instance($cmid);
+        } else {
+            // echo "no category, cmid, or course set\n";
+            $module = null;
+            $cm = null;
+            if ($courseid){
+                // $thispageurl->params(compact('courseid'));
+                // require_login($courseid, false);
+                $thiscontext = context_course::instance($courseid);
+            } else {
+                $thiscontext = null;
+            }
+        }
+       
+        /*
+        if ($thiscontext){
+            $contexts = new question_edit_contexts($thiscontext);
+            echo "contexts: "; print_r($contexts);
+            // $editcontexts = $contexts->require_one_edit_tab_cap('questions');
+            // $editcontexts = $contexts->all();
+            // $editcontexts = $thiscontext->get_parent_contexts(true);
+            $editcontexts = $thiscontext->get_child_contexts();
+        } else {
+            $editcontexts = null;
+        }
+        $cats = array ();
+        echo "editcontexts: "; print_r($editcontexts);
+        if($editcontexts) {
+            $cats = question_category_options($editcontexts);
+        }
+        */
+
+        $cats = get_categories_for_contexts($thiscontext->id);
+        $subcats = array();
+        foreach (array_keys($cats) as $catid) {
+           // $subcats = array_merge($subcats, question_categorylist($catid));
+           // $subcats[] = question_categorylist($catid);
+           // This does nothing if the main category is a course category.  What if it's not?
+           // foreach(question_categorylist($catid) as $subcat) {
+               // echo "subcat: "; print_r($subcat);
+           //    $subcats[$subcat] = 1;
+           // }
+        }
+        # echo "subcats: "; print_r($subcats);
+        return array_keys($cats);
+    }
+}
+
+
+
+class local_searchbytags_question_bank_column extends question_bank_column_base {
+    public function get_name() {
+        return 'local_searchbytags|tags';
+    }
+
+    protected function get_title() {
+        return get_string('tags');
+    }
+
+    protected function display_content($question, $rowclasses) {
+        if (!empty($question->tags)) {
+            echo rtrim(rtrim($question->tags, ','));
+        }
+    }
+
+    /*
+    public function get_extra_joins() {
+        return array('tags' => 'LEFT JOIN {tag_instance} tagi ON tagi.itemid = q.id LEFT JOIN {tag} ON {tag}.id = tagi.tagid');
+        return array('tags' = "JOIN (SELECT itemid, COUNT(*) as tagcount FROM mdl_tag_instance WHERE tagid IN (2, 9) GROUP BY itemid) tc ON tc.itemid=q.id AND tagcount=2
+                              ");
+        // MS SQL: SELECT COUNT(*) FROM (VALUES(1),(3),(5)) AS D(val);
+    }
+    */
+
+    public function get_extra_joins() {
+        /*
+        return array(
+                        'tag_instance' => ' LEFT JOIN mdl_tag_instance tagi ON itemid=q.id',
+                        'tags' => 'LEFT JOIN mdl_tag tag ON tag.id=tagi.tagid GROUP BY q.id'
+                    );
+        */
+        return array();
+    }
+
+    public function get_required_fields() {
+        // return array("(SELECT {tag}.name + ',' FROM {tag} WHERE id=tagi.tagid FOR XML PATH('')) AS tags");
+
+        // for mssql
+        /* */
+        return array("(SELECT tag.name + ', ' FROM {tag} tag 
+                               LEFT JOIN {tag_instance} tagi ON tag.id=tagi.tagid 
+                                WHERE tagi.itemid=q.id FOR XML PATH('')) AS tags");
+        /* */
+
+        // For MySQL
+        /*
+        return array("
+            (SELECT GROUP_CONCAT(name) AS tags FROM mdl_tag_instance LEFT JOIN mdl_tag ON mdl_tag.id=mdl_tag_instance.tagid WHERE itemid=q.id) as tags
+        ");
+        */
+    }
+}
+

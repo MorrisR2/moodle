@@ -1,0 +1,9 @@
+get_quiz_and_questions_stats($quiz, $currentgroup,
+    $this->try_loading_cached_stats                     X?
+    $this->s->compute_stats
+        quiz_statisticsesti_attempts_sql                X
+        load_step_data                                  X
+        new quiz_statisticsesti_question_stats          X
+
+
+cache_stats 

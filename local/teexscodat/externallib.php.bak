@@ -1,0 +1,277 @@
+<?php
+
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+
+/**
+ * Save data about courses, modules and quizzes which are inside SCORMs
+ * @package   localteexscodat
+ * @copyright 2012
+ * @author    Ray Morris <Ray.Morris@teex.tamu.edu>
+ * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+
+require_once($CFG->libdir . "/externallib.php");
+
+class local_teexscodat_external extends external_api {
+
+ 
+    // *** Functions for handling courses ***/
+
+    // Returns description of method parameters
+    public static function course_session_parameters() {
+        return new external_function_parameters(
+            array (
+                    'session' => new external_single_structure(
+                      array (
+                         'id'                => new external_value(PARAM_INT,      'session ID (required when updating previously added record)', VALUE_OPTIONAL),
+                         'student_id'        => new external_value(PARAM_INT,      'student id (required when creating a new record)', VALUE_OPTIONAL),
+                         'course_id'         => new external_value(PARAM_INT,      'course id (required when creating a new record)', VALUE_OPTIONAL),
+                         'was_completed'     => new external_value(PARAM_BOOL,     'course was completed in this session 1= true, 0 = false', VALUE_OPTIONAL),
+                         'pct_completed'     => new external_value(PARAM_INT,      'completion percentage, 0-100', VALUE_OPTIONAL),
+                         'session_start_gmt' => new external_value(PARAM_INT,      'session start time, in epoch format', VALUE_OPTIONAL),
+                         'session_seconds'   => new external_value(PARAM_INT,      'length of this session, in seconds', VALUE_OPTIONAL),
+                         'course_seconds'    => new external_value(PARAM_INT,      'SUM(session_seconds)', VALUE_OPTIONAL),
+                         'passed'            => new external_value(PARAM_BOOL,     '1 = pass, 0 = fail', VALUE_OPTIONAL)
+                       )
+                    )
+            ) 
+        );
+    }
+
+    public static function course_session($session) {
+        global $USER;
+        global $DB;
+
+        //Parameter validation
+        if (  ! ( isset($session['id']) || ( isset($session['course_id']) && isset($session['student_id']) )  )  ) {
+            throw new invalid_parameter_exception('id is required unless student_id and course_id are set');
+        }
+        $validated = self::validate_parameters( self::course_session_parameters(), array('session' => $session ) );
+        $session = $validated['session'];
+
+        //Context validation
+        // $context = get_context_instance(CONTEXT_COURSE, $session['course_id']);
+        $context = get_context_instance(CONTEXT_USER, $USER->id);
+        self::validate_context($context);
+
+        //Capability checking
+        require_capability('local/teexscodat:addrecords', $context);
+
+        if ( isset($session['id']) ) {
+            $record = $DB->get_record('local_teexscodat_course_sess',array('id'=>$session['id']));
+            if ($record) {
+                $DB->update_record('local_teexscodat_course_sess', $session);
+                return (array) $DB->get_record('local_teexscodat_course_sess',array('id'=>$session['id']));
+            } 
+        }
+
+        $session['id'] = $DB->insert_record('local_teexscodat_course_sess', $session, TRUE);
+        return (array) $DB->get_record('local_teexscodat_course_sess',array('id'=>$session['id']));
+    }
+
+    // Returns description of method result value
+    public static function course_session_returns() {
+           return new external_single_structure (
+                array(
+                         'id'                => new external_value(PARAM_INT,      'session ID (for updating previously added record)', VALUE_REQUIRED),
+                         'student_id'        => new external_value(PARAM_INT,      'student id', VALUE_REQUIRED),
+                         'course_id'         => new external_value(PARAM_INT,      'course id', VALUE_REQUIRED),
+                         'was_completed'     => new external_value(PARAM_BOOL,     'course was completed in this session 1= true, 0 = false', VALUE_OPTIONAL),
+                         'pct_completed'     => new external_value(PARAM_INT,      'completion percentage, 0-100', VALUE_OPTIONAL),
+                         'session_start_gmt' => new external_value(PARAM_INT,      'session start time, in epoch format', VALUE_OPTIONAL),
+                         'session_seconds'   => new external_value(PARAM_INT,      'length of this session, in seconds', VALUE_OPTIONAL),
+                         'course_seconds'    => new external_value(PARAM_INT,      'SUM(session_seconds)', VALUE_OPTIONAL),
+                         'passed'            => new external_value(PARAM_BOOL,     '1 = pass, 0 = fail', VALUE_OPTIONAL)
+
+                     )
+        );
+    }
+
+
+
+    // *** Functions for handling modules ***/
+
+    // Returns description of method parameters
+    public static function module_session_parameters() {
+        return new external_function_parameters(
+            array (
+                    'session' => new external_single_structure(
+                      array (
+                         'id'                => new external_value(PARAM_INT,      'session ID (required when updating previously added record)', VALUE_OPTIONAL),
+                         'course_id'         => new external_value(PARAM_INT,      'course id (required when creating a new record)', VALUE_OPTIONAL),
+                         'was_completed'     => new external_value(PARAM_BOOL,     'module was completed in this session 1= true, 0 = false', VALUE_OPTIONAL),
+                         'pct_completed'     => new external_value(PARAM_INT,      'completion percentage, 0-100', VALUE_OPTIONAL),
+                         'location'          => new external_value(PARAM_ALPHANUMEXT, 'last location in the module (url?)', VALUE_OPTIONAL),
+                         'furthest_page'     => new external_value(PARAM_INT,      'highest numbered page viewed', VALUE_OPTIONAL),
+                         'quiz_id'           => new external_value(PARAM_INT,      'ID of quiz for this module', VALUE_OPTIONAL),
+                         'module_seconds'    => new external_value(PARAM_INT,      'elapsed time in this module', VALUE_OPTIONAL)
+                       )
+                    )
+            ) 
+        );
+    }
+
+    public static function module_session($session) {
+        global $USER;
+        global $DB;
+
+        //Parameter validation
+        if (  ! ( isset($session['id']) || isset($session['course_id'])  )  ) {
+            throw new invalid_parameter_exception('course_idid is required unless id is set');
+        }
+        $validated = self::validate_parameters( self::module_session_parameters(), array('session' => $session ) );
+        $session = $validated['session'];
+
+        //Context validation
+        $context = get_context_instance(CONTEXT_USER, $USER->id);
+        self::validate_context($context);
+
+        //Capability checking
+        require_capability('local/teexscodat:addrecords', $context);
+
+        if ( isset($session['id']) ) {
+            $record = $DB->get_record('local_teexscodat_modul_sess',array('id'=>$session['id']));
+            if ($record) {
+                $DB->update_record('local_teexscodat_modul_sess', $session);
+                return (array) $DB->get_record('local_teexscodat_modul_sess',array('id'=>$session['id']));
+            } 
+        }
+
+        $session['id'] = $DB->insert_record('local_teexscodat_modul_sess', $session, TRUE);
+        return (array) $DB->get_record('local_teexscodat_modul_sess',array('id'=>$session['id']));
+    }
+
+    // Returns description of method result value
+    public static function module_session_returns() {
+           return new external_single_structure (
+                array(
+                         'id'                => new external_value(PARAM_INT,      'session ID (for updating previously added record)', VALUE_OPTIONAL),
+                         'course_id'         => new external_value(PARAM_INT,      'course id', VALUE_REQUIRED),
+                         'was_completed'     => new external_value(PARAM_BOOL,     'module was completed in this session 1= true, 0 = false', VALUE_OPTIONAL),
+                         'pct_completed'     => new external_value(PARAM_INT,      'completion percentage, 0-100', VALUE_OPTIONAL),
+                         'location'          => new external_value(PARAM_ALPHANUMEXT, 'last location in the module (url?)', VALUE_OPTIONAL),
+                         'furthest_page'     => new external_value(PARAM_INT,      'highest numbered page viewed', VALUE_OPTIONAL),
+                         'quiz_id'           => new external_value(PARAM_INT,      'ID of quiz for this module', VALUE_OPTIONAL),
+                         'module_seconds'    => new external_value(PARAM_INT,      'elapsed time in this module', VALUE_OPTIONAL)
+                     )
+        );
+    }
+
+
+
+    // *** Functions for handling quizzes ***/
+
+    // Returns description of method parameters
+    public static function quiz_session_parameters() {
+        return new external_function_parameters(
+            array (
+                    'session' => new external_single_structure(
+                      array (
+                         'username'          => new external_value(PARAM_RAW,      'student username', VALUE_REQUIRED),
+                         'module_id'         => new external_value(PARAM_RAW,      'module id',  VALUE_REQUIRED),
+                         'attempt_seq'       => new external_value(PARAM_INT,      '1 = first attempt, 2 = second attempt ...', VALUE_OPTIONAL),
+                         'score'             => new external_value(PARAM_INT,      '0-100', VALUE_OPTIONAL),
+                         'xml_data'          => new external_value(PARAM_RAW,      'complete XML dump for this attempt - questions, answers, etc.', VALUE_OPTIONAL),
+                       )
+                    )
+            )
+        );
+    }
+
+    public static function quiz_session($session) {
+        global $USER;
+        global $DB;
+
+        //Parameter validation
+        if (  ! ( isset($session['username']) && isset($session['module_id']) )  ) {
+            throw new invalid_parameter_exception('username and module_id are required');
+        }
+        $validated = self::validate_parameters( self::quiz_session_parameters(), array('session' => $session ) );
+        $session = $validated['session'];
+
+        //Context validation
+        $context = get_context_instance(CONTEXT_USER, $USER->id);
+        self::validate_context($context);
+
+        //Capability checking
+        require_capability('local/teexscodat:addrecords', $context);
+
+		// add_to_log(28, 'teexscodat', 'getsession', '', 'user: ' . $session['username'] . ' module: ' . $session['module_id'] . ' attempt: ' . $session['attempt_seq'], 0, $session['username']);
+		$userid = $DB->get_field('user', 'id', array( 'username' => $session['username']) );
+		add_to_log(28, 'teexscodat', 'getsession', '', 'user: ' . $session['username'] . ' module: ' . $session['module_id'] . ' attempt: ' . $session['attempt_seq'], 0, $userid);
+
+		// For debugging, to reset test user
+		// $DB->delete_records('local_teexscodat_quiz_sess', array('username'   =>$session['username']) );
+        if ( isset($session['attempt_seq']) ) {
+        	$key = array(
+                       'username'   =>$session['username'],
+					   'module_id'  =>$session['module_id'],
+				       'attempt_seq'=>$session['attempt_seq']
+						);
+			$record = $DB->get_record('local_teexscodat_quiz_sess',$key);
+            if ($record) {
+				// Set xml_data where the other fields already match
+				// $DB->set_field('local_teexscodat_quiz_sess', 'xml_data', $session['xml_data'], 'username', $session['username'], 'module_id', $session['module_id'], 'attempt_seq', $session['attempt_seq']);
+				$session['id'] = $record->id;
+                $DB->update_record('local_teexscodat_quiz_sess', $session);
+				$session['xml_data'] = wrap_cdata($session['xml_data']);
+				return $session;
+            } else {
+				$DB->insert_record('local_teexscodat_quiz_sess', $session, TRUE);
+				$session['xml_data'] = wrap_cdata($session['xml_data']);
+				return $session;
+			}
+		}
+        /*
+		$where = 'username=' . $session['username'] . ' AND module_id=' . $session['module_id'] ;
+		$record = $DB->get_record_sql('SELECT * FROM {local_teexscodat_quiz_sess} ' . 
+										'WHERE ' . $where . 
+										' ORDER BY attempt_seq DESC');
+        */
+        $records = $DB->get_records('local_teexscodat_quiz_sess', array('username' => $session['username'], 'module_id' => $session['module_id']), $sort='attempt_seq DESC', $fields='*', 0, 1);
+		reset($records);
+		$first_key = key($records);
+		if ($records[$first_key]) {
+			// add_to_log(28, 'teexscodat', 'foundsession', 'index.php?id=28', 'user: ' . $session['username'] . ' module: ' . $session['module_id'] . ' attempt: ' . $session['attempt_seq']);
+			return (array) $records[$first_key];
+		} else {
+			// add_to_log(28, 'teexscodat', 'newsession', 'index.php?id=28', 'user: ' . $session['username'] . ' module: ' . $session['module_id'] . ' attempt: ' . $session['attempt_seq']);
+			$session['attempt_seq'] = 1;
+			return $session;
+		}
+    }
+
+	private static function wrap_cdata($string) {
+		if ( substr($string, 0, 9) == '<![CDATA[' ) {
+			return $string;
+		} else {
+			return "<![CDATA[" .  $string .  "]]>";
+		}
+	}
+
+    // Returns description of method result value
+    public static function quiz_session_returns() {
+           return new external_single_structure (
+                      array (
+                         'username'          => new external_value(PARAM_RAW,      'student username', VALUE_REQUIRED),
+                         'module_id'         => new external_value(PARAM_RAW,      'module id', VALUE_REQUIRED),
+                         'attempt_seq'       => new external_value(PARAM_INT,      '1 = first attempt, 2 = second attempt ...', VALUE_REQUIRED),
+                         'score'             => new external_value(PARAM_INT,      '0-100', VALUE_OPTIONAL),
+                         'xml_data'          => new external_value(PARAM_RAW,      'complete XML dump for this attempt - questions, answers, etc.', VALUE_OPTIONAL),
+                       )
+        );
+    }
+
+
+} // end class local_teexscodat_external

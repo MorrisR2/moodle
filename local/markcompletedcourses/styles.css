@@ -1,0 +1,25 @@
+.block_navigation .block_tree .tree_item.course a {
+    background-repeat: no-repeat;
+    background-position: 0 0;
+    padding-left: 20px;
+}
+
+.block_navigation .block_tree .tree_item.course.completed a {
+    background-image: url(/pix/i/completion-auto-y.png);
+}
+
+.block_navigation .block_tree .tree_item.course.notcompleted a {
+    background-image: url(/pix/i/completion-auto-n.png);
+}
+
+.course_list .course_title a {
+    background-repeat: no-repeat;
+    background-position: 0 center;
+    padding-left: 20px;
+    background-image: url(/pix/i/completion-auto-n.png);
+}
+
+.course_list .course_title a.completed {
+    background-image: url(/pix/i/completion-auto-y.png);
+}
+
