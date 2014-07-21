@@ -46,7 +46,7 @@ if ($USER->id != $user->id and has_capability('report/userenrolments:view', $per
 
 require_capability('report/userenrolments:view', $coursecontext);
 
-add_to_log($course->id, 'course', 'report user enrolments', "report/userenrolments/user.php?id=$user->id&course=$course->id", $course->id);
+// add_to_log($course->id, 'course', 'report user enrolments', "report/userenrolments/user.php?id=$user->id&course=$course->id", $course->id);
 
 
 $PAGE->set_pagelayout('admin');
