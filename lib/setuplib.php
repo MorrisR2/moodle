@@ -33,7 +33,7 @@ define('DEBUG_NONE', 0);
 /** Fatal errors only */
 define('DEBUG_MINIMAL', E_ERROR | E_PARSE);
 /** Errors, warnings and notices */
-define('DEBUG_NORMAL', E_ERROR | E_PARSE | E_WARNING | E_NOTICE);
+define('DEBUG_NORMAL', E_ERROR | E_PARSE | E_WARNING);
 /** All problems except strict PHP warnings */
 define('DEBUG_ALL', E_ALL & ~E_STRICT);
 /** DEBUG_ALL with all debug messages and strict warnings */
