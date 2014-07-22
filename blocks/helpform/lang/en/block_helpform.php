@@ -24,6 +24,7 @@
  */
 
 $string['helpform:addinstance'] = 'Add a new help form block';
+$string['course_list:myaddinstance'] = 'Add a new courses block to My home';
 $string['pluginname'] = 'Need Help?';
 $string['helpform'] = 'Help Form';
 $string['configtitle'] = 'Block title';
