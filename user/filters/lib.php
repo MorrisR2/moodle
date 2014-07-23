@@ -34,6 +34,7 @@ require_once($CFG->dirroot.'/user/filters/yesno.php');
 require_once($CFG->dirroot.'/user/filters/cohort.php');
 require_once($CFG->dirroot.'/user/filters/user_filter_forms.php');
 require_once($CFG->dirroot.'/user/filters/checkbox.php');
+require_once($CFG->dirroot.'/user/filters/number.php');
 
 /**
  * User filtering wrapper class.
@@ -66,7 +67,7 @@ class user_filtering {
             $fieldnames = array('realname' => 0, 'lastname' => 1, 'firstname' => 1, 'email' => 1, 'city' => 1, 'country' => 1,
                                 'confirmed' => 1, 'suspended' => 1, 'profile' => 1, 'courserole' => 1, 'systemrole' => 1,
                                 'cohort' => 1, 'firstaccess' => 1, 'lastaccess' => 1, 'neveraccessed' => 1, 'timemodified' => 1,
-                                'nevermodified' => 1, 'username' => 1, 'auth' => 1, 'mnethostid' => 1);
+                                'nevermodified' => 1, 'username' => 1, 'auth' => 1, 'mnethostid' => 1, 'id' => 1);
         }
 
         $this->_fields  = array();
@@ -184,7 +185,8 @@ class user_filtering {
                     return null; // Filter not needed.
                 }
                 return new user_filter_simpleselect('mnethostid', get_string('mnetidprovider', 'mnet'), $advanced, 'mnethostid', $choices);
-
+            case 'id':
+               return new user_filter_number($fieldname, get_string('mdlid', 'filters'), $advanced, $fieldname);
             default:
                 return null;
         }
