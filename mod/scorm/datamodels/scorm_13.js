@@ -252,10 +252,10 @@ function SCORMapi1_3(def, cmiobj, cmiint, cmicommentsuser, cmicommentslms, scorm
 
         for (element in datamodel[scoid]) {
             if (element.match(/\.n\./) == null) {
-                if ((typeof eval('datamodel["' + scoid + '"]["' + element + '"].defaultvalue')) != 'undefined') {
-                    eval(element + ' = datamodel["' + scoid + '"]["' + element + '"].defaultvalue;');
+                if ((typeof(datamodel[scoid][element].defaultvalue)) != 'undefined') {
+                    element = datamodel[scoid][element].defaultvalue;
                 } else {
-                    eval(element + ' = "";');
+                    element = "";
                 }
             }
         }
@@ -380,8 +380,8 @@ function SCORMapi1_3(def, cmiobj, cmiint, cmicommentsuser, cmicommentslms, scorm
             if (element != "") {
                 var expression = new RegExp(CMIIndex,'g');
                 var elementmodel = String(element).replace(expression,'.n.');
-                if ((typeof eval('datamodel["' + scoid + '"]["' + elementmodel + '"]')) != "undefined") {
-                    if (eval('datamodel["' + scoid + '"]["' + elementmodel + '"].mod') != 'w') {
+                if ((typeof(datamodel[scoid][elementmodel])) != "undefined") {
+                    if (datamodel[scoid][elementmodel].mod != 'w') {
 
                         element = String(element).replace(/\.(\d+)\./, ".N$1.");
                         element = element.replace(/\.(\d+)\./, ".N$1.");
@@ -417,7 +417,7 @@ function SCORMapi1_3(def, cmiobj, cmiint, cmicommentsuser, cmicommentslms, scorm
                     var parentmodel = '';
                     if (elementmodel.substr(elementmodel.length - childrenstr.length,elementmodel.length) == childrenstr) {
                         parentmodel = elementmodel.substr(0,elementmodel.length - childrenstr.length);
-                        if ((typeof eval('datamodel["' + scoid + '"]["' + parentmodel + '"]')) != "undefined") {
+                        if ((typeof (datamodel[scoid][parentmodel])) != "undefined") {
                             errorCode = "301";
                             diagnostic = "Data Model Element Does Not Have Children";
                         } else {
@@ -425,7 +425,7 @@ function SCORMapi1_3(def, cmiobj, cmiint, cmicommentsuser, cmicommentslms, scorm
                         }
                     } else if (elementmodel.substr(elementmodel.length - countstr.length,elementmodel.length) == countstr) {
                         parentmodel = elementmodel.substr(0,elementmodel.length - countstr.length);
-                        if ((typeof eval('datamodel["' + scoid + '"]["' + parentmodel + '"]')) != "undefined") {
+                        if ((typeof (datamodel[scoid][parentmodel])) != "undefined") {
                             errorCode = "301";
                             diagnostic = "Data Model Element Cannot Have Count";
                         } else {
@@ -473,10 +473,10 @@ function SCORMapi1_3(def, cmiobj, cmiint, cmicommentsuser, cmicommentslms, scorm
             if (element != "") {
                 var expression = new RegExp(CMIIndex,'g');
                 var elementmodel = String(element).replace(expression,'.n.');
-                if ((typeof eval('datamodel["' + scoid + '"]["' + elementmodel + '"]')) != "undefined") {
-                    if (eval('datamodel["' + scoid + '"]["' + elementmodel + '"].mod') != 'r') {
-                        if (eval('datamodel["' + scoid + '"]["' + elementmodel + '"].format') != 'CMIFeedback') {
-                            expression = new RegExp(eval('datamodel["' + scoid + '"]["' + elementmodel + '"].format'));
+                if ((typeof (datamodel[scoid][elementmodel])) != "undefined") {
+                    if (datamodel[scoid][elementmodel].mod != 'r') {
+                        if (datamodel[scoid][elementmodel].format != 'CMIFeedback') {
+                            expression = new RegExp(datamodel[scoid][elementmodel].format);
                         } else {
                             // cmi.interactions.n.type depending format accept everything at this stage
                             expression = new RegExp(CMIFeedback);
@@ -500,10 +500,10 @@ function SCORMapi1_3(def, cmiobj, cmiint, cmicommentsuser, cmicommentslms, scorm
                                             errorCode = "351";
                                         }
                                         parentelement = subelement + '.' + elementIndex;
-                                        if ((typeof eval(parentelement) == "undefined") || (typeof eval(parentelement + '._count') == "undefined")) {
+                                        if ((typeof eval(parentelement) == "undefined") || (typeof (parentelement._count) == "undefined")) {
                                             errorCode = "408";
                                         } else {
-                                            if (elementIndexes[i + 1] > eval(parentelement + '._count')) {
+                                            if (elementIndexes[i + 1] > parentelement._count) {
                                                 errorCode = "351";
                                                 diagnostic = "Data Model Element Collection Set Out Of Order";
                                             }
@@ -528,9 +528,9 @@ function SCORMapi1_3(def, cmiobj, cmiint, cmicommentsuser, cmicommentslms, scorm
                                         switch (elementmodel) {
                                             case 'cmi.objectives.n.id':
                                                 if (!duplicatedID(element,parentelement,value)) {
-                                                    if (elementIndexes[elementIndexes.length - 2] == eval(parentelement + '._count')) {
-                                                        eval(parentelement + '._count++;');
-                                                        eval(subelement + ' = new Object();');
+                                                    if (elementIndexes[elementIndexes.length - 2] == parentelement._count) {
+                                                        parentelement._count++;
+                                                        subelement = new Object();
                                                         var subobject = eval(subelement);
                                                         subobject.success_status = datamodel[scoid]["cmi.objectives.n.success_status"].defaultvalue;
                                                         subobject.completion_status = datamodel[scoid]["cmi.objectives.n.completion_status"].defaultvalue;
@@ -548,9 +548,9 @@ function SCORMapi1_3(def, cmiobj, cmiint, cmicommentsuser, cmicommentslms, scorm
                                                 }
                                             break;
                                             case 'cmi.interactions.n.id':
-                                                if (elementIndexes[elementIndexes.length - 2] == eval(parentelement + '._count')) {
-                                                    eval(parentelement + '._count++;');
-                                                    eval(subelement + ' = new Object();');
+                                                if (elementIndexes[elementIndexes.length - 2] == parentelement._count) {
+                                                    parentelement._count++;
+                                                    subelement = new Object();
                                                     var subobject = eval(subelement);
                                                     subobject.objectives = new Object();
                                                     subobject.objectives._count = 0;
@@ -559,9 +559,10 @@ function SCORMapi1_3(def, cmiobj, cmiint, cmicommentsuser, cmicommentslms, scorm
                                             case 'cmi.interactions.n.objectives.n.id':
                                                 if (typeof eval(parentelement) != "undefined") {
                                                     if (!duplicatedID(element,parentelement,value)) {
-                                                        if (elementIndexes[elementIndexes.length - 2] == eval(parentelement + '._count')) {
-                                                            eval(parentelement + '._count++;');
-                                                            eval(subelement + ' = new Object();');
+                                                        if (elementIndexes[elementIndexes.length - 2] == parentelement + '._count') 
+														{
+                                                            parentelement._count++;
+                                                            subelement = new Object();
                                                         }
                                                     } else {
                                                         errorCode = "351";
@@ -574,19 +575,19 @@ function SCORMapi1_3(def, cmiobj, cmiint, cmicommentsuser, cmicommentslms, scorm
                                             case 'cmi.interactions.n.correct_responses.n.pattern':
                                                 if (typeof eval(parentelement) != "undefined") {
                                                     // Use cmi.interactions.n.type value to check the right dataelement format
-                                                    if (elementIndexes[elementIndexes.length - 2] == eval(parentelement + '._count')) {
+                                                    if (elementIndexes[elementIndexes.length - 2] == parentelement + '._count') {
                                                         var interactiontype = eval(String(parentelement).replace('correct_responses','type'));
-                                                        var interactioncount = eval(parentelement + '._count');
+                                                        var interactioncount = parentelement + '._count';
                                                         // trap duplicate values, which is not allowed for type choice
                                                         if (interactiontype == 'choice') {
                                                             for (var i = 0; (i < interactioncount) && (errorCode == "0"); i++) {
-                                                               if (eval(parentelement + '.N' + i + '.pattern') == value) {
+                                                               if (parentelement.Ni.pattern == value) {
                                                                    errorCode = "351";
                                                                }
                                                             }
                                                         }
                                                         if ((typeof correct_responses[interactiontype].limit == 'undefined') ||
-                                                            (eval(parentelement + '._count') < correct_responses[interactiontype].limit)) {
+                                                            (parentelement._count < correct_responses[interactiontype].limit)) {
                                                             var nodes = new Array();
                                                             if (correct_responses[interactiontype].delimiter != '') {
                                                                 nodes = value.split(correct_responses[interactiontype].delimiter);
@@ -601,8 +602,8 @@ function SCORMapi1_3(def, cmiobj, cmiint, cmicommentsuser, cmicommentslms, scorm
                                                             }
                                                             if ((errorCode == "0") && ((correct_responses[interactiontype].duplicate == false) ||
                                                                (!duplicatedPA(element,parentelement,value))) || (errorCode == "0" && value == "")) {
-                                                               eval(parentelement + '._count++;');
-                                                               eval(subelement + ' = new Object();');
+                                                               parentelement._count++;
+                                                               subelement = new Object();
                                                             } else {
                                                                 if (errorCode == "0") {
                                                                     errorCode = "351";
@@ -623,9 +624,9 @@ function SCORMapi1_3(def, cmiobj, cmiint, cmicommentsuser, cmicommentslms, scorm
                                             break;
                                             default:
                                                 if ((parentelement != 'cmi.objectives') && (parentelement != 'cmi.interactions') && (typeof eval(parentelement) != "undefined")) {
-                                                    if (elementIndexes[elementIndexes.length - 2] == eval(parentelement + '._count')) {
-                                                        eval(parentelement + '._count++;');
-                                                        eval(subelement + ' = new Object();');
+                                                    if (elementIndexes[elementIndexes.length - 2] == parentelement._count) {
+                                                        parentelement._count++;
+                                                        subelement = new Object();
                                                     } else {
                                                         errorCode = "351";
                                                         diagnostic = "Data Model Element Collection Set Out Of Order";
@@ -655,11 +656,11 @@ function SCORMapi1_3(def, cmiobj, cmiint, cmicommentsuser, cmicommentslms, scorm
                                                 subobject.correct_responses._count = 0;
                                             break;
                                             case 'cmi.interactions.n.learner_response':
-                                                if (typeof eval(subelement + '.type') == "undefined") {
+                                                if (typeof (subelement.type) == "undefined") {
                                                     errorCode = "408";
                                                 } else {
                                                     // Use cmi.interactions.n.type value to check the right dataelement format
-                                                    interactiontype = eval(subelement + '.type');
+                                                    interactiontype = subelement.type;
                                                     var nodes = new Array();
                                                     if (learner_response[interactiontype].delimiter != '') {
                                                         nodes = value.split(learner_response[interactiontype].delimiter);
@@ -714,12 +715,12 @@ function SCORMapi1_3(def, cmiobj, cmiint, cmicommentsuser, cmicommentslms, scorm
                                                     errorCode = "408";
                                                 } else {
                                                     // Use cmi.interactions.n.type value to check the right //dataelement format
-                                                    var interactiontype = eval(subel1 + '.type');
-                                                    var interactioncount = eval(parentelement + '._count');
+                                                    var interactiontype = subel1.type;
+                                                    var interactioncount = parentelement._count;
                                                     // trap duplicate values, which is not allowed for type choice
                                                     if (interactiontype == 'choice') {
                                                         for (var i = 0; (i < interactioncount) && (errorCode == "0"); i++) {
-                                                           if (eval(parentelement + '.N' + i + '.pattern') == value) {
+                                                           if (parentelement.Ni.pattern == value) {
                                                                errorCode = "351";
                                                            }
                                                         }
@@ -749,13 +750,13 @@ function SCORMapi1_3(def, cmiobj, cmiint, cmicommentsuser, cmicommentslms, scorm
                                     SCORMapi1_3.timeout = Y.later(60000, API_1484_11, 'Commit', [""], false);
                                 }
 
-                                if ((typeof eval('datamodel["' + scoid + '"]["' + elementmodel + '"].range')) != "undefined") {
-                                    range = eval('datamodel["' + scoid + '"]["' + elementmodel + '"].range');
+                                if ((typeof (datamodel[scoid][elementmodel].range)) != "undefined") {
+                                    range = datamodel[scoid][elementmodel].range;
                                     ranges = range.split('#');
                                     value = value * 1.0;
                                     if (value >= ranges[0]) {
                                         if ((ranges[1] == '*') || (value <= ranges[1])) {
-                                            eval(element + '=value;');
+                                            element=value;
                                             errorCode = "0";
                                             if (scormdebugging) {
                                                 LogAPICall("SetValue", element, value, errorCode);

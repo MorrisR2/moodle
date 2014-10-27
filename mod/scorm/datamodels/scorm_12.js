@@ -147,10 +147,10 @@ function SCORMapi1_2(def, cmiobj, cmiint, cmistring256, cmistring4096, scormdebu
 
         for (element in datamodel[scoid]) {
             if (element.match(/\.n\./) == null) {
-                if ((typeof eval('datamodel["' + scoid + '"]["' + element + '"].defaultvalue')) != 'undefined') {
-                    eval(element + ' = datamodel["' + scoid + '"]["' + element + '"].defaultvalue;');
+                if (typeof (datamodel[scoid][element].defaultvalue) != 'undefined') {
+                    element = datamodel[scoid][element].defaultvalue;
                 } else {
-                    eval(element + ' = "";');
+                    element = "";
                 }
             }
         }
@@ -244,8 +244,8 @@ function SCORMapi1_2(def, cmiobj, cmiint, cmistring256, cmistring4096, scormdebu
             if (element != "") {
                 expression = new RegExp(CMIIndex,'g');
                 elementmodel = String(element).replace(expression,'.n.');
-                if ((typeof eval('datamodel["' + scoid + '"]["' + elementmodel + '"]')) != "undefined") {
-                    if (eval('datamodel["' + scoid + '"]["' + elementmodel + '"].mod') != 'w') {
+                if ((typeof (datamodel[scoid][elementmodel])) != "undefined") {
+                    if (datamodel["scoid"]["elementmodel"].mod != 'w') {
                         element = String(element).replace(expression, "_$1.");
                         elementIndexes = element.split('.');
                         subelement = 'cmi';
@@ -263,21 +263,21 @@ function SCORMapi1_2(def, cmiobj, cmiint, cmistring256, cmistring4096, scormdebu
                             errorCode = "0"; // Need to check if it is the right errorCode
                         }
                     } else {
-                        errorCode = eval('datamodel["' + scoid + '"]["' + elementmodel + '"].readerror');
+                        errorCode = datamodel["scoid"]["elementmodel"].readerror;
                     }
                 } else {
                     childrenstr = '._children';
                     countstr = '._count';
                     if (elementmodel.substr(elementmodel.length - childrenstr.length,elementmodel.length) == childrenstr) {
                         parentmodel = elementmodel.substr(0,elementmodel.length - childrenstr.length);
-                        if ((typeof eval('datamodel["' + scoid + '"]["' + parentmodel + '"]')) != "undefined") {
+                        if ((typeof datamodel["scoid"]["parentmodel"]) != "undefined") {
                             errorCode = "202";
                         } else {
                             errorCode = "201";
                         }
                     } else if (elementmodel.substr(elementmodel.length - countstr.length,elementmodel.length) == countstr) {
                         parentmodel = elementmodel.substr(0,elementmodel.length - countstr.length);
-                        if ((typeof eval('datamodel["' + scoid + '"]["' + parentmodel + '"]')) != "undefined") {
+                        if ((typeof datamodel["scoid"]["parentmodel"]) != "undefined") {
                             errorCode = "203";
                         } else {
                             errorCode = "201";
@@ -304,9 +304,9 @@ function SCORMapi1_2(def, cmiobj, cmiint, cmistring256, cmistring4096, scormdebu
             if (element != "") {
                 expression = new RegExp(CMIIndex,'g');
                 elementmodel = String(element).replace(expression,'.n.');
-                if ((typeof eval('datamodel["' + scoid + '"]["' + elementmodel + '"]')) != "undefined") {
-                    if (eval('datamodel["' + scoid + '"]["' + elementmodel + '"].mod') != 'r') {
-                        expression = new RegExp(eval('datamodel["' + scoid + '"]["' + elementmodel + '"].format'));
+                if ((typeof datamodel[scoid][elementmodel]) != "undefined") {
+                    if (datamodel[scoid][elementmodel].mod != 'r') {
+                        expression = new RegExp(datamodel[scoid][elementmodel].format);
                         value = value + '';
                         matches = value.match(expression);
                         if (matches != null) {
@@ -317,14 +317,14 @@ function SCORMapi1_2(def, cmiobj, cmiint, cmistring256, cmistring4096, scormdebu
                                 for (i = 1; i < elementIndexes.length - 1; i++) {
                                     elementIndex = elementIndexes[i];
                                     if (elementIndexes[i + 1].match(/^\d+$/)) {
-                                        if ((typeof eval(subelement + '.' + elementIndex)) == "undefined") {
-                                            eval(subelement + '.' + elementIndex + ' = new Object();');
-                                            eval(subelement + '.' + elementIndex + '._count = 0;');
+                                        if (typeof (subelement.elementIndex) == "undefined") {
+                                           subelement.elementIndex = new Object();
+                                            subelement.elementIndex._count = 0;
                                         }
-                                        if (elementIndexes[i + 1] == eval(subelement + '.' + elementIndex + '._count')) {
-                                            eval(subelement + '.' + elementIndex + '._count++;');
+                                        if (elementIndexes[i + 1] == subelement.elementIndex._count) {
+                                            subelement.elementIndex._count++;
                                         }
-                                        if (elementIndexes[i + 1] > eval(subelement + '.' + elementIndex + '._count')) {
+                                        if (elementIndexes[i + 1] > subelement.elementIndex._count) {
                                             errorCode = "201";
                                         }
                                         subelement = subelement.concat('.' + elementIndex + '_' + elementIndexes[i + 1]);
@@ -333,19 +333,19 @@ function SCORMapi1_2(def, cmiobj, cmiint, cmistring256, cmistring4096, scormdebu
                                         subelement = subelement.concat('.' + elementIndex);
                                     }
                                     if ((typeof eval(subelement)) == "undefined") {
-                                        eval(subelement + ' = new Object();');
+                                        subelement = new Object();
                                         if (subelement.substr(0,14) == 'cmi.objectives') {
-                                            eval(subelement + '.score = new Object();');
-                                            eval(subelement + '.score._children = score_children;');
-                                            eval(subelement + '.score.raw = "";');
-                                            eval(subelement + '.score.min = "";');
-                                            eval(subelement + '.score.max = "";');
+                                            subelement.score = new Object();
+                                            subelement.score._children = score_children;
+                                            subelement.score.raw = "";
+                                            subelement.score.min = "";
+                                            subelement.score.max = "";
                                         }
                                         if (subelement.substr(0,16) == 'cmi.interactions') {
-                                            eval(subelement + '.objectives = new Object();');
-                                            eval(subelement + '.objectives._count = 0;');
-                                            eval(subelement + '.correct_responses = new Object();');
-                                            eval(subelement + '.correct_responses._count = 0;');
+                                            subelement.objectives = new Object();
+                                            subelement.objectives._count = 0;
+                                            subelement.correct_responses = new Object();
+                                            subelement.correct_responses._count = 0;
                                         }
                                     }
                                 }
@@ -356,25 +356,25 @@ function SCORMapi1_2(def, cmiobj, cmiint, cmistring256, cmistring4096, scormdebu
                                 if (autocommit && !(SCORMapi1_2.timeout)) {
                                     SCORMapi1_2.timeout = Y.later(60000, API, 'LMSCommit', [""], false);
                                 }
-                                if ((typeof eval('datamodel["' + scoid + '"]["' + elementmodel + '"].range')) != "undefined") {
-                                    range = eval('datamodel["' + scoid + '"]["' + elementmodel + '"].range');
+                                if (typeof (datamodel[scoid][elementmodel].range) != "undefined") {
+                                    range = datamodel[scoid][elementmodel].range;
                                     ranges = range.split('#');
                                     value = value * 1.0;
                                     if ((value >= ranges[0]) && (value <= ranges[1])) {
-                                        eval(element + '=value;');
+                                        element=value;
                                         errorCode = "0";
                                         if (scormdebugging) {
                                             LogAPICall("LMSSetValue", element, value, errorCode);
                                         }
                                         return "true";
                                     } else {
-                                        errorCode = eval('datamodel["' + scoid + '"]["' + elementmodel + '"].writeerror');
+                                        errorCode = datamodel[scoid][elementmodel].writeerror;
                                     }
                                 } else {
                                     if (element == 'cmi.comments') {
                                         cmi.comments = cmi.comments + value;
                                     } else {
-                                        eval(element + '=value;');
+                                        element=value;
                                     }
                                     errorCode = "0";
                                     if (scormdebugging) {
@@ -384,10 +384,10 @@ function SCORMapi1_2(def, cmiobj, cmiint, cmistring256, cmistring4096, scormdebu
                                 }
                             }
                         } else {
-                            errorCode = eval('datamodel["' + scoid + '"]["' + elementmodel + '"].writeerror');
+                            errorCode = datamodel[scoid][elementmodel].writeerror;
                         }
                     } else {
-                        errorCode = eval('datamodel["' + scoid + '"]["' + elementmodel + '"].writeerror');
+                        errorCode = datamodel[scoid][elementmodel].writeerror;
                     }
                 } else {
                     errorCode = "201"
@@ -557,40 +557,40 @@ function SCORMapi1_2(def, cmiobj, cmiint, cmistring256, cmistring4096, scormdebu
 
                     // check if this specific element is not defined in the datamodel,
                     // but the generic element name is
-                    if ((eval('typeof datamodel["' + scoid + '"]["' + element + '"]')) == "undefined"
-                        && (eval('typeof datamodel["' + scoid + '"]["' + elementmodel + '"]')) != "undefined") {
+                    if ((typeof datamodel[scoid][element]) == "undefined"
+                        && (typeof datamodel[scoid][elementmodel]) != "undefined") {
 
                         // add this specific element to the data model (by cloning
                         // the generic element) so we can track changes to it
-                        eval('datamodel["' + scoid + '"]["' + element + '"]=CloneObj(datamodel["' + scoid + '"]["' + elementmodel + '"]);');
+                        datamodel[scoid][element]=CloneObj(datamodel[scoid][elementmodel]);
                     }
 
                     // check if the current element exists in the datamodel
-                    if ((typeof eval('datamodel["' + scoid + '"]["' + element + '"]')) != "undefined") {
+                    if ((typeof datamodel[scoid][element]) != "undefined") {
 
                         // make sure this is not a read only element
-                        if (eval('datamodel["' + scoid + '"]["' + element + '"].mod') != 'r') {
+                        if (datamodel[scoid][element].mod != 'r') {
 
                             elementstring = '&' + underscore(element) + '=' + encodeURIComponent(data[property]);
 
                             // check if the element has a default value
-                            if ((typeof eval('datamodel["' + scoid + '"]["' + element + '"].defaultvalue')) != "undefined") {
+                            if ((typeof datamodel[scoid][element].defaultvalue) != "undefined") {
 
                                 // check if the default value is different from the current value
-                                if (eval('datamodel["' + scoid + '"]["' + element + '"].defaultvalue') != data[property]
-                                    || eval('typeof(datamodel["' + scoid + '"]["' + element + '"].defaultvalue)') != typeof(data[property])) {
+                                if (datamodel[scoid][element].defaultvalue != data[property]
+                                    || typeof(datamodel[scoid][element].defaultvalue) != typeof(data[property])) {
 
                                     // append the URI fragment to the string we plan to commit
                                     datastring += elementstring;
 
                                     // update the element default to reflect the current committed value
-                                    eval('datamodel["' + scoid + '"]["' + element + '"].defaultvalue=data[property];');
+                                    datamodel[scoid][element].defaultvalue=data[property];
                                 }
                             } else {
                                 // append the URI fragment to the string we plan to commit
                                 datastring += elementstring;
                                 // no default value for the element, so set it now
-                                eval('datamodel["' + scoid + '"]["' + element + '"].defaultvalue=data[property];');
+                                datamodel[scoid][element].defaultvalue=data[property];
                             }
                         }
                     }
